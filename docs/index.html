@@ -383,11 +383,19 @@ var TESTS = [
   { file: 'test_api_naming.py',           n: 13, of: 'that the whole API speaks one language on the wire' },
   { file: 'test_calendar_logic.py',       n: 12, of: 'the slot engine' },
   { file: 'test_timestamps.py',           n: 12, of: 'that every timestamp is written the same way' },
-  { file: 'test_scheduler.py',            n:  9, of: 'the background sweep' },
-  { file: 'test_published_figures.py',    n:  8, of: 'the numbers on this page, against a fresh measurement' }
+  { file: 'test_published_figures.py',    n:  9, of: 'the numbers on this page, against a fresh measurement' },
+  { file: 'test_scheduler.py',            n:  9, of: 'the background sweep' }
 ];
 
-var TEST_LINES = 3008;
+var TEST_LINES = 3043;
+
+/* Which interpreter produced the statement counts above. It matters: coverage
+ * counts a `with` block or a multi-line call differently between versions, so
+ * the same unchanged file measures a different number of statements under a
+ * different Python. The guard compares only when the running one is this one,
+ * and skips with a reason otherwise -- which is why this line exists rather
+ * than the check simply failing on a CI runner. */
+var MEASURED_WITH = 'Python 3.14';
 var ENDPOINTS = 34;
 var ROLES = 3;
 
@@ -681,6 +689,11 @@ el('footNote').textContent =
   'is a complete reference implementation rather than a production-audited ' +
   'one — the panel above says plainly what is still missing. The app itself ' +
   'runs on your own machine and binds loopback by default.';
+
+el('footNote').textContent += ' The statement counts were produced by ' +
+  MEASURED_WITH + ': coverage counts statements differently between versions, so the
+  figure is a property of the code and the interpreter together, and the check that
+  guards it compares only like with like.';
 
 drawTiles();
 drawModules();
