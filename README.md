@@ -4,6 +4,10 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.12-blue.svg)](https://www.python.org/)
 
+**[Read the overview →](https://luke-zhang-cs-py.github.io/Full-Stack-Calendar-Software/)**
+— what a free slot has to survive, how five kinds of email get sent exactly
+once, and every bug this thing has had.
+
 A full-stack scheduling app: Flask + JWT auth on the backend, a vanilla
 HTML/CSS/JS single-page frontend served by the same app. Three roles —
 **client**, **provider**, **admin** — each get their own dashboard.
@@ -70,7 +74,7 @@ routes/
   offering_routes.py       catalogue CRUD (owner) + public browse
 templates/index.html       SPA shell
 templates/coffee.html      Guest booking page — no login, one decision
-static/architecture.html   Visual overview of every component (open it in a browser)
+docs/architecture.html     Visual overview of every component; published with the overview
 static/js/app.js           SPA views, including What I offer + Coffee chats
 static/css/style.css       Design system ("departure board" visual identity)
 static/js/api.js           Fetch wrapper (JWT storage + auth headers)
@@ -111,8 +115,9 @@ seeded admin. A provider needs to add weekly hours under **My schedule**
 before clients can book them.
 
 For a map of the whole system — every file, the email pipeline, the schema,
-the API surface — open `static/architecture.html` in a browser (double-click
-it, or visit `/static/architecture.html` while the app is running).
+the API surface — it is published alongside the overview at
+[/architecture.html](https://luke-zhang-cs-py.github.io/Full-Stack-Calendar-Software/architecture.html),
+or open `docs/architecture.html` locally.
 
 ## Moving to a cloud database
 
