@@ -9,10 +9,14 @@ it.
 import scheduler
 
 
-def test_a_sweep_runs_both_halves(ctx):
+def test_a_sweep_runs_every_part(ctx):
+    """Three now, not two: the day-before reminders, the half-hour nudges
+    and the coffee follow-ups. Naming the set rather than counting it is
+    what makes a part added and then never called show up here."""
     result = scheduler.sweep()
-    assert set(result) == {"reminders", "coffee"}
+    assert set(result) == {"reminders", "imminent", "coffee"}
     assert result["reminders"] == 0
+    assert result["imminent"] == 0
     assert result["coffee"] == {"nudged": 0, "expired": 0}
 
 
@@ -27,7 +31,8 @@ def test_a_failing_nudge_sweep_does_not_stop_reminders(ctx, monkeypatch, booking
     monkeypatch.setattr(coffee_notifications, "send_due_nudges", explode)
     result = scheduler.sweep()
     assert result["coffee"] is None, "recorded as failed"
-    assert result["reminders"] == 0, "and the other half still ran"
+    assert result["reminders"] == 0, "and the others still ran"
+    assert result["imminent"] == 0
 
 
 def test_a_failing_reminder_scan_does_not_stop_nudges(ctx, monkeypatch):
@@ -39,6 +44,23 @@ def test_a_failing_reminder_scan_does_not_stop_nudges(ctx, monkeypatch):
     monkeypatch.setattr(notifications, "send_due_reminders", explode)
     result = scheduler.sweep()
     assert result["reminders"] is None
+    assert result["imminent"] == 0
+    assert result["coffee"] == {"nudged": 0, "expired": 0}
+
+
+def test_a_failing_nudge_scan_does_not_stop_the_others(ctx, monkeypatch):
+    """The newest part of the sweep gets the same isolation as the rest.
+    Adding a third call to that loop is exactly when the one nobody wrapped
+    goes unnoticed, because it only shows up on the day it throws."""
+    import notifications
+
+    def explode(now=None):
+        raise RuntimeError("the clock went backwards")
+
+    monkeypatch.setattr(notifications, "send_imminent_reminders", explode)
+    result = scheduler.sweep()
+    assert result["imminent"] is None
+    assert result["reminders"] == 0
     assert result["coffee"] == {"nudged": 0, "expired": 0}
 
 

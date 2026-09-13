@@ -203,3 +203,94 @@ def test_the_reminder_says_when_not_just_what(ctx, booking, kind):
     notifications.send_due_reminders(now=a_reminder_moment(booking))
     row = sent(kind)[0]
     assert booking["start"] in row["subject"]
+
+
+# --------------------------------------------------- the half-hour nudge
+
+def minutes_before(booking, minutes):
+    start = dt.datetime.strptime(f"{booking['date']} {booking['start']}",
+                                 "%Y-%m-%d %H:%M")
+    return start - dt.timedelta(minutes=minutes)
+
+
+def test_a_nudge_goes_out_inside_the_half_hour(ctx, booking):
+    clear_log()
+    assert notifications.send_imminent_reminders(
+        now=minutes_before(booking, 25)) == 2
+    assert len(sent("imminent_client")) == 1
+    assert len(sent("imminent_provider")) == 1
+
+
+def test_nothing_is_nudged_before_the_window_opens(ctx, booking):
+    """IMMINENT_MINUTES_BEFORE is 30; at 31 minutes out it is not due yet."""
+    clear_log()
+    assert notifications.send_imminent_reminders(
+        now=minutes_before(booking, 31)) == 0
+    assert sent() == []
+
+
+def test_a_second_scan_nudges_nobody_twice(ctx, booking):
+    """The sweep runs on a timer, so it fires repeatedly inside the same
+    half hour."""
+    clear_log()
+    assert notifications.send_imminent_reminders(
+        now=minutes_before(booking, 20)) == 2
+    assert notifications.send_imminent_reminders(
+        now=minutes_before(booking, 10)) == 0
+    assert len(sent()) == 2
+
+
+def test_an_appointment_already_under_way_is_not_chased(ctx, booking):
+    """A reminder for something you are late to is noise, and a scan that
+    has fallen behind should stay quiet rather than shout."""
+    clear_log()
+    assert notifications.send_imminent_reminders(
+        now=minutes_before(booking, -5)) == 0
+    assert sent() == []
+
+
+def test_the_nudge_does_not_collide_with_the_day_before_reminder(ctx, booking):
+    """Separate message kinds, which is the whole reason both arrive: mailer
+    de-duplicates on (appointment, kind, recipient), so reusing the
+    reminder's kind would have this one silently dropped."""
+    clear_log()
+    assert notifications.send_due_reminders(
+        now=a_reminder_moment(booking)) == 2
+    assert notifications.send_imminent_reminders(
+        now=minutes_before(booking, 25)) == 2
+    assert len(sent()) == 4
+    assert {row["kind"] for row in sent()} == {
+        "reminder_client", "reminder_provider",
+        "imminent_client", "imminent_provider"}
+
+
+def test_a_cancelled_appointment_is_not_nudged(ctx, booking):
+    import database as db
+    clear_log()
+    db.execute("UPDATE appointments SET status = 'cancelled' WHERE id = ?",
+               (booking["id"],))
+    assert notifications.send_imminent_reminders(
+        now=minutes_before(booking, 20)) == 0
+
+
+def test_the_nudge_can_be_turned_off_on_its_own(ctx, booking):
+    """Somebody who wants only the day-before reminder should not have to
+    disable reminders altogether to get it."""
+    from flask import current_app
+    clear_log()
+    current_app.config["IMMINENT_ENABLED"] = False
+    try:
+        assert notifications.send_imminent_reminders(
+            now=minutes_before(booking, 20)) == 0
+        assert sent() == []
+    finally:
+        current_app.config["IMMINENT_ENABLED"] = True
+
+
+@pytest.mark.parametrize("kind", ["imminent_client", "imminent_provider"])
+def test_the_nudge_says_it_is_starting_soon(ctx, booking, kind):
+    clear_log()
+    notifications.send_imminent_reminders(now=minutes_before(booking, 25))
+    row = sent(kind)[0]
+    assert "Starting soon" in row["subject"]
+    assert booking["start"] in row["subject"]

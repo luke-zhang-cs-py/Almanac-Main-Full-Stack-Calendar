@@ -78,9 +78,14 @@ def long_date(date_str):
 
 
 def lead_time(appt, now):
-    """'tomorrow at 14:30' / 'in about 3 hours' / 'today at 14:30'.
+    """'in 25 minutes' / 'in about 3 hours' / 'tomorrow at 14:30'.
 
     A reminder that says "on 2026-09-08" makes the reader do the arithmetic.
+
+    Under an hour it counts in minutes. It used to round everything to whole
+    hours with a floor of one, so an appointment twenty-five minutes away was
+    described as "in about 1 hour" -- which is not a rounding error, it is
+    the wrong answer, and it is the half-hour reminder's normal case.
     """
     try:
         start = dt.datetime.strptime(f"{appt['date']} {appt['start_time']}", "%Y-%m-%d %H:%M")
@@ -89,7 +94,19 @@ def lead_time(appt, now):
 
     days = (start.date() - now.date()).days
     if days == 0:
-        hours = max(1, round((start - now).total_seconds() / 3600))
+        seconds = (start - now).total_seconds()
+        if seconds < 3600:
+            minutes = int(seconds // 60)
+            if minutes <= 0:
+                # Already started, or about to. Saying "in 0 minutes" reads
+                # like a bug; a scan running a little late should still send
+                # something true.
+                return f"starting now (at {appt['start_time']})"
+            if minutes == 1:
+                return f"in a minute (at {appt['start_time']})"
+            return f"in {minutes} minutes (at {appt['start_time']})"
+
+        hours = round(seconds / 3600)
         if hours <= 4:
             return (f"in about {hours} hour{'s' if hours != 1 else ''} "
                     f"(today at {appt['start_time']})")

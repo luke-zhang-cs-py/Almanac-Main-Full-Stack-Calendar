@@ -1,0 +1,277 @@
+  html{color-scheme:dark}
+  body{margin:0}
+  [hidden]{display:none !important}
+
+  :root{
+    --bg:#06090f;
+    --surface:#0c1119;
+    --surface-2:#111a25;
+    --border:#1c2836;
+    --border-strong:#2d4054;
+    --text:#dce6f0;
+    --text-dim:#8296ab;
+    --text-faint:#586a7c;
+    --accent:#22d3ee;
+    --accent-soft:#0a2430;
+    --on-accent:#04080d;
+    --meeting:#22d3ee;
+    --match:#5b8cf7;
+    --class:#34d399;
+    --personal:#fbbf24;
+    --event:#a78bfa;
+    --danger:#fb7185;
+    --past:#090d13;
+    --mono:ui-monospace,"SF Mono","Cascadia Mono","Segoe UI Mono",Consolas,"Liberation Mono",monospace;
+  }
+
+  *{box-sizing:border-box}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1100px;margin:0 auto;padding:26px 24px 56px}
+
+  /* square geometry throughout */
+  .card,.day,.chip,button,input,select,.bar,.bar i,.ev,.todo,.dot,.n,.hour{border-radius:0}
+
+  /* ---------- discreet header: just the month and the controls ---------- */
+  .topbar{display:flex;align-items:center;gap:2px;margin-bottom:14px}
+  .monthlabel{font:12px var(--mono);color:var(--text-dim);letter-spacing:.04em;padding:0 12px 0 4px}
+  .spacer{flex:1}
+
+  button{font:inherit;cursor:pointer;border:1px solid transparent;transition:color .12s,border-color .12s,background .12s}
+  .ghost{background:transparent;border-color:var(--border);color:var(--text-dim);padding:5px 11px;min-width:32px;font-size:12.5px;margin-left:-1px}
+  .ghost:hover{border-color:var(--border-strong);color:var(--text)}
+  .primary{background:var(--accent);color:var(--on-accent);border:none;padding:8px 14px;font-size:13px;font-weight:600}
+  .primary:hover{filter:brightness(1.12)}
+  .quiet{background:transparent;border:1px solid var(--border-strong);color:var(--text-dim);padding:8px 12px;font-size:12.5px}
+  .quiet:hover{color:var(--accent);border-color:var(--accent)}
+  .linkbtn{background:none;border:none;color:var(--text-faint);padding:8px 0 0;font-size:12px;text-decoration:underline;text-underline-offset:3px}
+  .linkbtn:hover{color:var(--text)}
+
+  /* ---------- layout ---------- */
+  .app{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:start}
+  .main{display:flex;flex-direction:column;gap:16px;min-width:0}
+  .card{background:var(--surface);border:1px solid var(--border);padding:16px}
+  .side{display:flex;flex-direction:column;gap:20px}
+  .cardtitle{margin:0 0 13px;font-size:12px;font-weight:600;color:var(--text-faint);display:flex;align-items:baseline;gap:8px}
+  .count{font:11px var(--mono);color:var(--text-faint);font-weight:400}
+
+  /* ---------- countdown (compact, to leave the list room) ---------- */
+  .cdcard{padding:14px 16px}
+  .cdcard .cardtitle{margin-bottom:9px}
+  .cdrow{display:flex;align-items:baseline;gap:9px}
+  .bignum{font:600 30px/1 var(--mono);letter-spacing:-.02em;color:var(--accent);font-variant-numeric:tabular-nums}
+  .cdlabel{margin:0;font-size:12px;color:var(--text-dim)}
+  .bar{height:3px;background:var(--surface-2);margin:11px 0 7px}
+  .bar i{display:block;height:100%;background:var(--accent);transition:width .3s ease}
+  .cdsub{margin:0;font:10.5px var(--mono);color:var(--text-faint)}
+  .cdopen kbd{font:10px var(--mono);border:1px solid var(--border-strong);
+    padding:1px 4px;color:var(--text-dim);text-decoration:none}
+
+  /* ---------- countdown overlay ---------- */
+  /* One box per target. The number is the point, so it carries the type
+     scale on its own and everything else in the box recedes. */
+  .cdoverlay{position:fixed;inset:0;z-index:40;display:flex;
+    align-items:center;justify-content:center;padding:24px;
+    background:rgba(6,9,15,.82)}
+  .cdpanel{background:var(--surface);border:1px solid var(--border-strong);
+    padding:18px 20px 16px;width:min(1000px,100%);max-height:88vh;
+    display:flex;flex-direction:column}
+  .cdhead{display:flex;align-items:center;justify-content:space-between;
+    gap:12px;margin-bottom:12px;flex:0 0 auto}
+  .cdhead .cardtitle{margin:0}
+  /* 121 of them, so each one is small and the grid scrolls rather than the
+     page. Small enough that a title will not fit, which is what the dots and
+     the tooltip are for. */
+  .cdboxes{display:grid;gap:5px;overflow:auto;flex:1 1 auto;
+    grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
+  .cdbox{border:1px solid var(--border);background:var(--surface-2);
+    padding:7px 8px 6px;display:flex;flex-direction:column;gap:1px;min-width:0}
+  .cdbox .n{font:600 17px/1 var(--mono);letter-spacing:-.02em;
+    font-variant-numeric:tabular-nums;color:var(--accent)}
+  .cdbox .d{font:9.5px var(--mono);color:var(--text-dim);white-space:nowrap}
+  /* The dot takes its colour from the same .c-* / .m-* classes the chips and
+     strips use, via colorKey -- so a dot here and the block in the day view
+     are the same colour without a second table of colours to keep in step. */
+  .cdbox .dots{display:flex;gap:2px;margin:4px 0 2px;min-height:4px;flex-wrap:wrap}
+  .cddot{width:8px;height:4px;flex:0 0 auto}
+  .cddot.none{background:var(--border)}
+  .cdbox .k{font-size:10px;color:var(--text-dim);overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  /* Today and the days gone read differently, and not by colour alone --
+     today is outlined and the past is dimmed. */
+  .cdbox.now{border-color:var(--accent);background:var(--accent-soft)}
+  .cdbox.now .n{color:var(--accent)}
+  .cdbox.gone{opacity:.42}
+  .cdbox.gone .n{color:var(--text-dim)}
+  /* The grid scrolls, so the note has to sit outside it rather than read as
+     one more row that happens to be text. */
+  .cdfoot{flex:0 0 auto;border-top:1px solid var(--border);
+    margin-top:12px;padding-top:10px;line-height:1.6}
+  @media (max-width:520px){
+    .cdpanel{padding:14px 15px 12px}
+    .cdboxes{grid-template-columns:repeat(auto-fill,minmax(88px,1fr))}
+  }
+
+  /* ---------- calendar ---------- */
+  .dow{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:5px}
+  .dow span{text-align:center;font-size:11px;color:var(--text-faint);padding-bottom:3px}
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+  .day{
+    all:unset;display:flex;flex-direction:column;gap:5px;
+    min-height:100px;padding:7px 8px;
+    background:var(--surface-2);border:1px solid transparent;
+    cursor:pointer;overflow:hidden;
+  }
+  /* a day that has already passed goes grey and recedes */
+  .day.past{background:var(--past)}
+  .day.past .dnum{color:var(--text-faint)}
+  .day.past .chip,.day.past .marks{opacity:.4;filter:grayscale(.85)}
+  .day.outside{background:transparent;cursor:default}
+  .day:hover{border-color:var(--border-strong)}
+  .day.selected,.day.selected:hover{border-color:var(--accent);background:var(--accent-soft)}
+  .day.selected .dnum{color:var(--text)}
+  .day.selected .chip{opacity:1;filter:none}
+  .day:focus-visible{outline:1px solid var(--accent);outline-offset:1px}
+
+  .dnum{font:12px var(--mono);color:var(--text-dim);display:flex;align-items:center}
+  /* square marker for today, not a circle */
+  .day.today .dnum .n{
+    background:var(--accent);color:var(--on-accent);font-weight:700;
+    min-width:19px;height:18px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;
+  }
+  .chips{display:flex;flex-direction:column;gap:3px;min-width:0}
+  .chip{display:flex;align-items:center;gap:6px;font:10.5px/1.35 var(--mono);
+        white-space:nowrap;overflow:hidden;color:var(--text)}
+  .dot{width:5px;height:5px;flex:0 0 auto}
+  .chip .t{color:var(--text-faint);font-variant-numeric:tabular-nums;flex:0 0 auto}
+  .chip .x{overflow:hidden;text-overflow:ellipsis}
+  .chip.done{opacity:.4}
+  .chip.done .x,.chip.done .t{text-decoration:line-through}
+  .more{font:10px var(--mono);color:var(--text-faint);padding-left:11px}
+  .marks{margin-top:auto;font:9.5px var(--mono);color:var(--text-faint);letter-spacing:.02em}
+  .m-meeting{background:var(--meeting)} .m-match{background:var(--match)}
+  .m-class{background:var(--class)}     .m-personal{background:var(--personal)}
+  .m-event{background:var(--event)}
+  .m-task{background:var(--class)}   /* legacy events saved before "class" replaced "task" */
+  /* pick-your-own palette */
+  .c-cyan{background:#22d3ee}   .c-blue{background:#5b8cf7}
+  .c-violet{background:#a78bfa} .c-green{background:#34d399}
+  .c-amber{background:#fbbf24}  .c-orange{background:#fb923c}
+  .c-pink{background:#f472b6}   .c-red{background:#fb7185}
+  .c-slate{background:#8296ab}
+
+  .swatches{display:flex;gap:6px;align-items:center}
+  .sw{width:18px;height:18px;padding:0;border:1px solid rgba(255,255,255,.14);cursor:pointer;flex:0 0 auto}
+  .sw:hover{border-color:var(--text-dim)}
+  .sw[aria-pressed="true"]{outline:1px solid var(--text);outline-offset:2px}
+  .sw:focus-visible{outline:2px solid var(--text);outline-offset:2px}
+
+  /* ---------- expanded day view ---------- */
+  .dayview{border-color:var(--border-strong)}
+  .cardhead{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:16px}
+  .dvtitle{margin:0;font-size:15px;font-weight:600}
+  .dvtitle span{color:var(--text-faint);font:11px var(--mono);font-weight:400;margin-left:8px}
+  .dvgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:26px}
+  .colhead{margin:0 0 9px;font-size:11.5px;font-weight:600;color:var(--text-faint)}
+  .colhead.sp{margin-top:22px}
+
+  /* proportional day timeline: 1 minute = HOUR_PX/60 pixels */
+  .timeline{position:relative}
+  .tlh{position:absolute;left:0;right:0;border-top:1px solid var(--border)}
+  .tlh:last-of-type{border-bottom:1px solid var(--border)}
+  .tll{position:absolute;left:0;top:2px;width:44px;text-align:right;
+       font:10.5px var(--mono);color:var(--text-faint);font-variant-numeric:tabular-nums}
+  /* click any empty stretch to start an event there */
+  .tlarea{position:absolute;top:0;bottom:0;left:52px;right:0;cursor:pointer}
+  .blk{position:absolute;overflow:hidden;cursor:pointer;text-align:left;
+       display:flex;flex-direction:column;gap:1px;
+       padding:3px 6px 3px 10px;background:var(--surface-2);border:1px solid var(--border);
+       font:10.5px/1.3 var(--mono);color:var(--text)}
+  .blk:hover{border-color:var(--accent);z-index:2}
+  .blk:focus-visible{outline:1px solid var(--accent);z-index:2}
+  .blk .strip{position:absolute;left:0;top:0;bottom:0;width:3px}
+  .blkt{color:var(--text-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 0 auto}
+  .blkx{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .blk.tight{padding-top:1px;padding-bottom:1px;justify-content:center}
+  .blk.tight .blkt{display:none}
+  .blk.done{opacity:.5}
+  .blk.done .blkx,.blk.done .blkt{text-decoration:line-through}
+
+  /* ---------- lists ---------- */
+  .evlist,.todolist{list-style:none;margin:0;padding:0}
+  .evlist{margin-bottom:12px}
+  .ev,.todo{display:flex;gap:9px;padding:7px 0;border-bottom:1px solid var(--border)}
+  .ev{align-items:center}
+  .todo{align-items:flex-start}
+  .ev:last-child,.todo:last-child{border-bottom:none}
+  .ev .time{font:11px var(--mono);font-variant-numeric:tabular-nums;color:var(--text-dim);flex:0 0 auto;min-width:92px}
+  .ev .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+  .ev.editing{background:var(--accent-soft);box-shadow:inset 2px 0 0 var(--accent)}
+  .edit{all:unset;cursor:pointer;color:var(--text-faint);font:10.5px var(--mono);padding:2px 4px;flex:0 0 auto}
+  .edit:hover{color:var(--accent)}
+  .edit:focus-visible{outline:1px solid var(--accent)}
+  /* an established meeting gets crossed out */
+  .ev.done{opacity:.55}
+  .ev.done .name,.ev.done .time{text-decoration:line-through;color:var(--text-faint)}
+  .ev.done .dot{filter:grayscale(1)}
+  /* to-do items carry more weight than the surrounding chrome */
+  .todo{padding:10px 0;gap:11px}
+  .todo .txt{flex:1;min-width:0;font-size:14.5px;line-height:1.45;color:var(--text);overflow-wrap:anywhere}
+  .todo.done .txt{text-decoration:line-through;color:var(--text-faint)}
+  .todolist{margin-bottom:10px}
+
+  .del{all:unset;cursor:pointer;color:var(--text-faint);font-size:15px;line-height:1;padding:0 3px;flex:0 0 auto}
+  .del:hover{color:var(--danger)}
+  .del:focus-visible{outline:1px solid var(--accent)}
+  .empty{color:var(--text-faint);font-size:12.5px;margin:0 0 12px}
+  .hint{margin:10px 0 0;font-size:12px;color:var(--text-faint)}
+  .datarow{display:flex;gap:18px}
+  .datarow .linkbtn{padding:0}
+
+  .addform{display:flex;flex-direction:column;gap:7px}
+  .row{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+  .dash{font:11px var(--mono);color:var(--text-faint);flex:0 0 auto}
+  #evType{flex:0 0 108px}
+  input[type=text],input[type=time],select{
+    font:13px var(--mono);width:100%;min-width:0;padding:8px 9px;color:var(--text);
+    background:var(--surface-2);border:1px solid var(--border);
+  }
+  input::placeholder{color:var(--text-faint)}
+  input:focus,select:focus{outline:none;border-color:var(--accent)}
+  input[type=time]{flex:0 0 108px;font-variant-numeric:tabular-nums}
+  select{flex:1}
+  #evTz{flex:0 0 88px}
+
+  /* square checkboxes (native ones round themselves) */
+  input[type=checkbox]{
+    appearance:none;-webkit-appearance:none;margin:0;flex:0 0 auto;cursor:pointer;position:relative;
+    width:14px;height:14px;background:transparent;border:1px solid var(--border-strong);
+  }
+  input[type=checkbox]:hover{border-color:var(--accent)}
+  input[type=checkbox]:checked{background:var(--accent);border-color:var(--accent)}
+  input[type=checkbox]:checked::after{
+    content:"";position:absolute;left:4px;top:1px;width:3px;height:7px;
+    border:solid var(--on-accent);border-width:0 2px 2px 0;transform:rotate(45deg);
+  }
+  input[type=checkbox]:focus-visible{outline:1px solid var(--accent);outline-offset:2px}
+  /* slightly larger box to match the heavier list text */
+  .todo input[type=checkbox]{width:16px;height:16px;margin-top:3px}
+  .todo input[type=checkbox]:checked::after{left:5px;top:2px;width:3px;height:8px}
+
+  @media (max-width:900px){
+    .app{grid-template-columns:minmax(0,1fr)}
+    .day{min-height:78px}
+    .chip .t{display:none}
+    .dvgrid{grid-template-columns:minmax(0,1fr);gap:20px}
+  }
+  @media (max-width:520px){
+    .wrap{padding:16px 12px 32px}
+    .day{min-height:62px;padding:5px}
+    .chip{font-size:9.5px;gap:4px}
+    .marks{display:none}
+    .bignum{font-size:27px}
+  }

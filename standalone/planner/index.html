@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>September Planner</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="wrap">
+  <header class="topbar">
+    <button class="ghost" id="prevBtn" aria-label="Previous month">&lt;</button>
+    <button class="ghost" id="nextBtn" aria-label="Next month">&gt;</button>
+    <span class="monthlabel" id="monthLabel">September 2026</span>
+    <span class="spacer"></span>
+    <button class="ghost" id="todayBtn">Today</button>
+  </header>
+
+  <div class="app">
+    <div class="main">
+      <section class="card">
+        <div class="dow">
+          <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+        </div>
+        <div class="grid" id="grid"></div>
+      </section>
+
+      <!-- expands only once a date is clicked -->
+      <section class="card dayview" id="dayView" hidden>
+        <div class="cardhead">
+          <h2 class="dvtitle" id="dvTitle"></h2>
+          <button class="del" id="dvClose" type="button" aria-label="Collapse day">&times;</button>
+        </div>
+
+        <div class="dvgrid">
+          <div>
+            <h3 class="colhead" id="planHead">Plan</h3>
+            <div class="timeline" id="hours"></div>
+            <p class="hint" id="planNote" hidden></p>
+          </div>
+
+          <div>
+            <h3 class="colhead">Classes &amp; events</h3>
+            <ul class="evlist" id="evList"></ul>
+            <p class="empty" id="evEmpty" hidden>Nothing scheduled yet.</p>
+            <form class="addform" id="evForm">
+              <div class="row">
+                <input type="time" id="evTime" value="09:00" required aria-label="Start time">
+                <span class="dash">to</span>
+                <input type="time" id="evEnd" value="10:00" required aria-label="End time">
+                <select id="evTz" aria-label="Time zone">
+                  <option value="BST">BST</option>
+                  <option value="GMT">GMT</option>
+                  <option value="EST">EST</option>
+                  <option value="">no zone</option>
+                </select>
+              </div>
+              <div class="row">
+                <!-- No Meeting option. Events already stored as meetings still
+                     render and keep their colour; it is simply not something
+                     new events can be any more. -->
+                <select id="evType" aria-label="Type">
+                  <option value="class">Class</option>
+                  <option value="match">Match</option>
+                  <option value="personal">Personal</option>
+                  <option value="event">Event</option>
+                </select>
+                <input type="text" id="evTitle" placeholder="Lecture — room 03/016" maxlength="80" required aria-label="Event title">
+              </div>
+              <div class="row">
+                <div class="swatches" id="evColors" role="group" aria-label="Colour"></div>
+                <span class="spacer"></span>
+                <button class="quiet" type="submit" id="evSubmit">Add</button>
+                <button class="quiet" type="button" id="evCancel" hidden>Cancel</button>
+              </div>
+            </form>
+            <p class="hint" id="evMsg" hidden></p>
+
+            <h3 class="colhead sp">To-do for this day</h3>
+            <ul class="todolist" id="dtList"></ul>
+            <p class="empty" id="dtEmpty">No tasks for this day.</p>
+            <form class="addform" id="dtForm">
+              <div class="row">
+                <input type="text" id="dtText" placeholder="Add a task for this day&hellip;" maxlength="120" required aria-label="New task for this day">
+                <button class="quiet" type="submit">Add</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="side">
+      <section class="card cdcard">
+        <h2 class="cardtitle">Countdown</h2>
+        <div class="cdrow">
+          <span class="bignum" id="cdNum">110</span>
+          <span class="cdlabel" id="cdLabel">days remaining</span>
+        </div>
+        <div class="bar"><i id="cdBar" style="width:0%"></i></div>
+        <p class="cdsub" id="cdSub"></p>
+        <button class="linkbtn cdopen" id="cdOpen" type="button"
+                aria-haspopup="dialog">All countdowns &nbsp;<kbd>C</kbd></button>
+      </section>
+
+      <section class="card">
+        <h2 class="cardtitle">To-do list <span class="count" id="todoCount">0 left</span></h2>
+        <form class="addform" id="todoForm">
+          <div class="row">
+            <input type="text" id="todoText" placeholder="Add a task&hellip;" maxlength="120" required aria-label="New task">
+            <button class="primary" type="submit">Add</button>
+          </div>
+        </form>
+        <ul class="todolist" id="todoList"></ul>
+        <p class="empty" id="todoEmpty">Your list is empty.</p>
+        <button class="linkbtn" id="clearDone" hidden>Clear completed</button>
+      </section>
+
+      <div class="datarow">
+        <button class="linkbtn" id="exportBtn" type="button">Export backup</button>
+        <button class="linkbtn" id="importBtn" type="button">Import backup</button>
+        <input type="file" id="importFile" accept="application/json,.json" hidden>
+      </div>
+      <p class="hint" id="dataMsg" hidden></p>
+    </aside>
+  </div>
+</div>
+
+<!-- The countdown overlay. One box per target, each showing the number of
+     whole days between today and it. Opened from the sidebar or by pressing
+     C; closed with Escape, the button, or a click on the backdrop. -->
+<div class="cdoverlay" id="cdOverlay" hidden role="dialog" aria-modal="true"
+     aria-labelledby="cdOverlayTitle">
+  <div class="cdpanel" role="document">
+    <div class="cdhead">
+      <h2 class="cardtitle" id="cdOverlayTitle">Countdowns</h2>
+      <button class="del" id="cdClose" type="button" aria-label="Close">&times;</button>
+    </div>
+    <div class="cdboxes" id="cdBoxes"></div>
+    <p class="cdsub cdfoot" id="cdOverlayNote"></p>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

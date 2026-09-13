@@ -101,6 +101,20 @@ def test_the_reminder_trigger_is_admin_only(client, provider):
                        headers=provider["auth"]).status_code == 403
 
 
+def test_the_half_hour_nudge_can_be_driven_from_outside(client, admin, booking):
+    """Its own endpoint rather than folded into run-reminders: on cron the
+    two want very different schedules, because this one is only as punctual
+    as how often it is run."""
+    res = client.post("/api/admin/emails/run-imminent", headers=admin["auth"])
+    assert res.status_code == 200
+    assert res.get_json()["queued"] == 0, "the fixture books five days out"
+
+
+def test_the_half_hour_trigger_is_admin_only(client, provider):
+    assert client.post("/api/admin/emails/run-imminent",
+                       headers=provider["auth"]).status_code == 403
+
+
 def test_the_nudge_trigger_reports_what_it_did(client, admin):
     res = client.post("/api/coffee/run-nudges", headers=admin["auth"])
     assert res.status_code == 200

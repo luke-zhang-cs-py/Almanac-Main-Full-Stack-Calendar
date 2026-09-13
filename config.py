@@ -76,6 +76,20 @@ class Config:
     REMINDER_HOURS_BEFORE = float(os.environ.get("REMINDER_HOURS_BEFORE", "24"))
     REMINDER_SCAN_MINUTES = float(os.environ.get("REMINDER_SCAN_MINUTES", "15"))
 
+    # The second, nearer reminder: a nudge shortly before the appointment
+    # rather than the day before. It is its own message kind, so the
+    # de-duplication that stops the day-before reminder repeating does not
+    # swallow this one too -- both go out, once each.
+    #
+    # It is sent on the first scan that finds the appointment within this
+    # many minutes of starting, so the real lead depends on
+    # REMINDER_SCAN_MINUTES: at the defaults (30 and 15) it lands 15-30
+    # minutes ahead. Set REMINDER_SCAN_MINUTES=5 for closer to a true half
+    # hour. Scanning is cheap; it is one indexed query over confirmed rows.
+    IMMINENT_ENABLED = os.environ.get("IMMINENT_ENABLED", "1") == "1"
+    IMMINENT_MINUTES_BEFORE = float(
+        os.environ.get("IMMINENT_MINUTES_BEFORE", "30"))
+
 
 def secret_key_problem(secret_key):
     """What is wrong with this SECRET_KEY, in a sentence, or None if nothing.

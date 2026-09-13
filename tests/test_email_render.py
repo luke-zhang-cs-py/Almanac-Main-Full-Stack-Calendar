@@ -134,8 +134,25 @@ def test_lead_time_words_the_gap(ctx, start, expected):
 
 
 def test_lead_time_singular_hour(ctx):
-    now = dt.datetime(2026, 9, 8, 13, 45)
+    """Exactly an hour out, so the hours branch is the one under test. This
+    used to pass a 45-minute gap, which the minutes branch now claims -- and
+    describing 45 minutes as "about 1 hour" was the reason it changed."""
+    now = dt.datetime(2026, 9, 8, 13, 30)
     assert "1 hour (" in lead_time(an_appointment(), now)
+
+
+@pytest.mark.parametrize("now, expected", [
+    ("2026-09-08 14:05", "in 25 minutes (at 14:30)"),
+    ("2026-09-08 13:45", "in 45 minutes (at 14:30)"),
+    ("2026-09-08 14:29", "in a minute (at 14:30)"),
+    ("2026-09-08 14:30", "starting now (at 14:30)"),
+    ("2026-09-08 14:35", "starting now (at 14:30)"),
+])
+def test_lead_time_counts_minutes_under_an_hour(ctx, now, expected):
+    """The half-hour nudge's normal case. Flooring everything at one hour
+    told somebody twenty-five minutes away that they had about an hour."""
+    moment = dt.datetime.strptime(now, "%Y-%m-%d %H:%M")
+    assert lead_time(an_appointment(), moment) == expected
 
 
 def test_lead_time_survives_a_malformed_appointment(ctx):

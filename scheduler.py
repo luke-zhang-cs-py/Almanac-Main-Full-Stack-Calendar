@@ -57,8 +57,10 @@ def start(app):
         _thread = threading.Thread(target=_loop, args=(app, interval),
                                    name="almanac-reminders", daemon=True)
         _thread.start()
-        log.info("scheduler started: every %.0f min, %.0f h ahead",
-                 interval / 60, app.config["REMINDER_HOURS_BEFORE"])
+        log.info("scheduler started: every %.0f min, %.0f h ahead, "
+                 "nudges %.0f min ahead",
+                 interval / 60, app.config["REMINDER_HOURS_BEFORE"],
+                 app.config["IMMINENT_MINUTES_BEFORE"])
 
 
 def stop():
@@ -74,7 +76,8 @@ def _loop(app, interval):
 
 
 def sweep():
-    """One pass: appointment reminders, then coffee chat follow-ups.
+    """One pass: the day-before reminders, the half-hour nudges, then
+    coffee chat follow-ups.
 
     Both rides on one tick rather than two timers, so the process keeps one
     background loop and one place for it to go wrong. Each half is isolated:
@@ -84,6 +87,7 @@ def sweep():
     """
     results = {}
     for name, run in (("reminders", notifications.send_due_reminders),
+                      ("imminent", notifications.send_imminent_reminders),
                       ("coffee", coffee_notifications.send_due_nudges)):
         try:
             results[name] = run()

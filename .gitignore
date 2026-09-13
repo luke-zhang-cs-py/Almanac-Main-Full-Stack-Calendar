@@ -14,3 +14,13 @@ venv/
 htmlcov/
 .pytest_cache/
 login_users.db
+
+# The planner's seed: one person's term timetable, diary and to-do list. The
+# engine lives in standalone/planner/ and is committed; the seed is not, and
+# a timetable says where somebody is at every hour of every weekday. Keep
+# yours outside the repo and pass --data to tools/build_planner.py.
+# tests/test_planner.py also fails if a second seed appears beside the
+# sample, because a rule nobody can see is a rule that gets broken.
+planner-data.js
+standalone/planner/data.js
+september-planner.html

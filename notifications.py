@@ -14,6 +14,8 @@ cancel an appointment        -> notice to both sides
 mark an appointment complete -> thank-you to the client
 REMINDER_HOURS_BEFORE the
   appointment starts         -> reminder to both sides (scheduler.py drives this)
+IMMINENT_MINUTES_BEFORE it
+  starts                     -> a second, shorter nudge to both sides
 
 This module used to be five hundred lines because it also owned the message
 layout and the background timer. Those are now email_render.py and
@@ -276,6 +278,88 @@ def send_due_reminders(now=None):
     queued = sum(_remind_both_sides(appt, now) for appt in rows)
     if queued:
         log.info("reminder scan queued %s email(s)", queued)
+    return queued
+
+
+def send_imminent_reminders(now=None):
+    """
+    Mail everyone whose appointment starts within IMMINENT_MINUTES_BEFORE.
+
+    The second, nearer reminder. send_due_reminders catches an appointment
+    the day before, when there is still time to rearrange; this one is the
+    nudge that stops somebody who agreed to a thing yesterday missing it by
+    half an hour.
+
+    Its own message kind, which is the whole reason it arrives at all:
+    mailer de-duplicates on (appointment, kind, recipient), so reusing
+    "reminder_client" here would mean the day-before message had already
+    claimed that slot and this one would be dropped without a word.
+
+    The window starts at `now`, so an appointment already under way is not
+    chased. A reminder for something you are late to is noise, and a scan
+    that has fallen behind should stay quiet rather than shout.
+
+    Returns the number of emails queued.
+    """
+    now = now or dt.datetime.now()
+    if not current_app.config.get("IMMINENT_ENABLED", True):
+        return 0
+
+    cutoff = now + dt.timedelta(
+        minutes=current_app.config["IMMINENT_MINUTES_BEFORE"])
+
+    rows = db.query(
+        _APPOINTMENT_SELECT
+        + " WHERE a.status = 'confirmed' AND (a.date || ' ' || a.start_time) BETWEEN ? AND ?"
+        " ORDER BY a.date, a.start_time",
+        (now.strftime("%Y-%m-%d %H:%M"), cutoff.strftime("%Y-%m-%d %H:%M")),
+    )
+
+    queued = sum(_nudge_both_sides(appt, now) for appt in rows)
+    if queued:
+        log.info("imminent scan queued %s email(s)", queued)
+    return queued
+
+
+def _nudge_both_sides(appt, now):
+    """The two short-notice reminders for one appointment."""
+    moment = when(appt)
+    lead = lead_time(appt, now)
+
+    text, html = render(
+        title="Starting soon",
+        intro=[f"Hi {appt['client_name']}, your appointment is {lead}."],
+        details=details(appt, counterpart=("Provider", appt["provider_name"])),
+        action=("View my appointments", url("/")),
+        outro="If you're running late, let them know.",
+    )
+    queued = int(bool(mailer.send(mailer.Message(
+        kind="imminent_client",
+        to=appt["client_email"],
+        subject=f"Starting soon: {moment} with {appt['provider_name']}",
+        text=text,
+        html=html,
+        appointment_id=appt["id"],
+        user_id=appt["client_id"],
+    ))))
+
+    text, html = render(
+        title="Starting soon",
+        intro=[f"Hi {appt['provider_name']}, you're seeing "
+               f"{appt['client_name']} {lead}."],
+        details=details(appt, counterpart=("Client", appt["client_name"])),
+        action=("Open my calendar", url("/")),
+        outro="",
+    )
+    queued += int(bool(mailer.send(mailer.Message(
+        kind="imminent_provider",
+        to=appt["provider_email"],
+        subject=f"Starting soon: {moment} with {appt['client_name']}",
+        text=text,
+        html=html,
+        appointment_id=appt["id"],
+        user_id=appt["provider_id"],
+    ))))
     return queued
 
 

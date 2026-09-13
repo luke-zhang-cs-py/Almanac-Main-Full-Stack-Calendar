@@ -71,3 +71,19 @@ def run_reminders():
     """
     queued = notifications.send_due_reminders()
     return jsonify({"queued": queued})
+
+
+@bp.post("/run-imminent")
+@token_required
+@roles_required("admin")
+def run_imminent():
+    """
+    Trigger a short-notice nudge scan immediately.
+
+    Separate from run-reminders rather than folded into it: the two run on
+    very different cadences. A day-before scan is fine hourly; this one is
+    only as punctual as how often it runs, so on cron it wants its own,
+    tighter schedule.
+    """
+    queued = notifications.send_imminent_reminders()
+    return jsonify({"queued": queued})
