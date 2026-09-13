@@ -64,6 +64,10 @@ def test_every_authenticated_endpoint_answers_in_camel(client, provider, booking
             "/api/coffee/invites", headers=provider["auth"])),
         ("GET /api/providers/<id>/offerings", client.get(
             f"/api/providers/{provider['id']}/offerings")),
+        ("GET /api/pounds", client.get("/api/pounds", headers=booking["auth"])),
+        ("GET /api/pounds/quote", client.get(
+            "/api/pounds/quote?cadCents=100000&on=2026-09-11",
+            headers=booking["auth"])),
     ]
     for label, response in checks:
         assert_camel(response, label)

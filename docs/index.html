@@ -339,9 +339,10 @@ footer a { color: inherit; }
 
 var MODULES = [
   { name: 'coffee_chats.py',               lines: 518, stmts: 190, missed: 19, does: 'the invite lifecycle: tokens, expiry, nudges, guest booking' },
+  { name: 'pounds.py',                     lines: 499, stmts: 187, missed:  0, does: 'Canadian dollars into pounds, crossed through the euro, against a ceiling' },
   { name: 'mailer.py',                     lines: 288, stmts: 128, missed: 18, does: 'transport: SMTP, the background queue, the delivery log' },
   { name: 'routes/availability_routes.py', lines: 182, stmts: 103, missed:  1, does: 'provider hours and blocked dates; the public slot lookup' },
-  { name: 'database.py',                   lines: 420, stmts:  99, missed: 18, does: 'one interface over SQLite and Postgres' },
+  { name: 'database.py',                   lines: 449, stmts:  99, missed: 18, does: 'one interface over SQLite and Postgres' },
   { name: 'routes/coffee_routes.py',       lines: 200, stmts:  97, missed:  8, does: 'invites for the host, booking for the guest' },
   { name: 'offerings.py',                  lines: 250, stmts:  89, missed:  0, does: 'the priced catalogue; money as integer minor units' },
   { name: 'notifications.py',              lines: 320, stmts:  87, missed:  6, does: 'what Almanac says, and on what occasion' },
@@ -351,8 +352,9 @@ var MODULES = [
   { name: 'routes/offering_routes.py',     lines: 138, stmts:  71, missed:  8, does: 'catalogue CRUD for the owner, browse for everyone' },
   { name: 'email_render.py',               lines: 206, stmts:  63, missed:  0, does: 'how a message is laid out — text and HTML from one description' },
   { name: 'routes/auth_routes.py',         lines:  97, stmts:  56, missed:  0, does: 'register, login, me' },
+  { name: 'routes/pound_routes.py',        lines:  97, stmts:  50, missed:  0, does: 'one ledger per account: record, list, quote, remove' },
   { name: 'auth.py',                       lines:  84, stmts:  48, missed:  1, does: 'JWTs, and the two decorators that guard every route' },
-  { name: 'app.py',                        lines:  77, stmts:  45, missed:  4, does: 'the factory and the blueprint registration' },
+  { name: 'app.py',                        lines:  79, stmts:  47, missed:  4, does: 'the factory and the blueprint registration' },
   { name: 'config.py',                     lines: 117, stmts:  43, missed:  0, does: 'every setting, from the environment — and the key check' },
   { name: 'routes/email_routes.py',        lines:  73, stmts:  43, missed:  0, does: 'the admin delivery log, a test send, a manual scan' },
   { name: 'scheduler.py',                  lines:  93, stmts:  42, missed:  3, does: 'the one background timer: reminders and coffee nudges' },
@@ -371,6 +373,7 @@ var OMITTED = [
 var TESTS = [
   { file: 'test_appointments_api.py',     n: 36, of: 'booking, cancelling, completing, and who may do which' },
   { file: 'test_coffee_chats.py',         n: 32, of: 'the invite lifecycle end to end' },
+  { file: 'test_pounds.py',               n: 31, of: 'the cross rate and the markup, against the wallet fixture' },
   { file: 'test_email_render.py',         n: 28, of: 'that the text and HTML halves cannot drift apart' },
   { file: 'test_hostile_input.py',        n: 27, of: 'what a provider can do to their own calendar' },
   { file: 'test_accounts_api.py',         n: 23, of: 'registration, login, and the role nobody may self-assign' },
@@ -387,7 +390,7 @@ var TESTS = [
   { file: 'test_scheduler.py',            n:  9, of: 'the background sweep' }
 ];
 
-var TEST_LINES = 3043;
+var TEST_LINES = 3480;
 
 /* Which interpreter produced the statement counts above. It matters: coverage
  * counts a `with` block or a multi-line call differently between versions, so

@@ -299,6 +299,22 @@ CREATE TABLE IF NOT EXISTS offerings (
 );
 CREATE INDEX IF NOT EXISTS idx_offerings_provider
     ON offerings(provider_id, is_active, sort_order);
+
+-- Somebody spending Canadian dollars in Britain, against a ceiling. The
+-- pounds are deliberately not a column: they are derived from the dollars,
+-- the date and the rate file, and a stored derived figure drifts the first
+-- time the rates are refreshed. See pounds.py.
+CREATE TABLE IF NOT EXISTS pound_conversions (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    spent_on    TEXT NOT NULL,
+    description TEXT NOT NULL,
+    category    TEXT,
+    cad_cents   INTEGER NOT NULL,
+    created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%S', 'now', 'localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_pound_conversions_user
+    ON pound_conversions(user_id, spent_on);
 """
 
 SCHEMA_POSTGRES = """
@@ -408,6 +424,19 @@ CREATE TABLE IF NOT EXISTS offerings (
 );
 CREATE INDEX IF NOT EXISTS idx_offerings_provider
     ON offerings(provider_id, is_active, sort_order);
+
+-- The SQLite copy above carries the reasoning; this is the same table.
+CREATE TABLE IF NOT EXISTS pound_conversions (
+    id          SERIAL PRIMARY KEY,
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    spent_on    TEXT NOT NULL,
+    description TEXT NOT NULL,
+    category    TEXT,
+    cad_cents   INTEGER NOT NULL,
+    created_at  TEXT NOT NULL DEFAULT (to_char(now(), 'YYYY-MM-DD"T"HH24:MI:SS'))
+);
+CREATE INDEX IF NOT EXISTS idx_pound_conversions_user
+    ON pound_conversions(user_id, spent_on);
 """
 
 

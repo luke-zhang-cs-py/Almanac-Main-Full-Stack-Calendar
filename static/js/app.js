@@ -101,17 +101,20 @@ const NAV_BY_ROLE = {
   client: [
     { id: "book", label: "Book an appointment" },
     { id: "my-appointments", label: "My appointments" },
+    { id: "pounds", label: "Pound wallet" },
   ],
   provider: [
     { id: "schedule", label: "My schedule" },
     { id: "appointments", label: "Appointments" },
     { id: "offerings", label: "What I offer" },
     { id: "coffee", label: "Coffee chats" },
+    { id: "pounds", label: "Pound wallet" },
   ],
   admin: [
     { id: "users", label: "Users" },
     { id: "all-appointments", label: "All appointments" },
     { id: "emails", label: "Email log" },
+    { id: "pounds", label: "Pound wallet" },
   ],
 };
 
@@ -156,6 +159,7 @@ function selectView(viewId) {
     "users": renderAdminUsersView,
     "all-appointments": renderAdminAppointmentsView,
     "emails": renderAdminEmailsView,
+    "pounds": renderPoundsView,
   };
   (renderers[viewId] || (() => {}))();
 }
@@ -939,6 +943,225 @@ async function renderAdminEmailsView() {
   }
 
   load();
+}
+
+/* ---------------------------------------------------------------- */
+/* Pound wallet                                                        */
+/* ---------------------------------------------------------------- */
+
+/* Every figure on this view arrives already formatted from the server, and
+ * that is deliberate. money() above is a second copy of offerings.money and
+ * the two already differ over the " CAD" suffix; a third copy, for a
+ * currency with a thousands separator and no "Free" case, is how a page
+ * comes to disagree with its own API about what somebody spent. pounds.py
+ * sends `pounds`, `cad`, `fee`, `spent`, `remaining` and `limit` as strings
+ * and this file only places them. */
+
+/* Four fifths of the limit: far enough in to be worth saying, not so close
+ * that saying it is useless. The standalone wallet uses the same fraction. */
+const POUNDS_NEAR = 0.8;
+
+function poundsBar(summary) {
+  const share = summary.limitPence
+    ? summary.spentPence / summary.limitPence : 0;
+  const over = summary.remainingPence < 0;
+  const near = !over && share >= POUNDS_NEAR;
+  const colour = over ? "#d03b3b" : near ? "#fab219" : "#2a78d6";
+
+  const fill = el("span", {
+    style: `display:block; height:100%; border-radius:4px; background:${colour};`
+           + ` width:${Math.min(100, Math.max(0, share * 100))}%;`,
+  });
+
+  /* The wording changes with the colour, not only the colour -- amber and
+   * red are not a signal every reader receives. */
+  const state = over
+    ? `${summary.remaining.replace("-", "")} over the limit`
+    : near ? `${summary.remaining} left — getting close`
+           : `${summary.remaining} left`;
+
+  return el("div", { style: "margin:.6rem 0 1rem;" }, [
+    el("span", {
+      style: "display:block; height:8px; border-radius:4px;"
+             + " background:rgba(127,127,127,.25); overflow:hidden;",
+    }, fill),
+    el("div", {
+      class: "mono",
+      style: "display:flex; justify-content:space-between; gap:1rem;"
+             + " font-size:.78rem; margin-top:.35rem;",
+    }, [
+      el("span",
+         { style: over ? "color:#d03b3b;" : near ? "color:#fab219;" : "" },
+         state),
+      el("span", { class: "muted" },
+         `${summary.spent} of ${summary.limit}`
+         + ` (${(Math.round(share * 1000) / 10).toFixed(1)}%)`),
+    ]),
+  ]);
+}
+
+/* The wrapper the rest of the app puts round an input. `.field input` is
+ * where the dark background and the border come from, so a bare input on
+ * this page would be the only pale box in the interface. */
+function field(label, input, flex) {
+  return el("div", { class: "field", style: `flex:${flex}; margin-bottom:0;` },
+            [el("label", {}, label), input]);
+}
+
+async function renderPoundsView() {
+  const root = mainRoot();
+  root.innerHTML = "";
+  root.append(
+    el("h2", {}, "Pound wallet"),
+    el("p", { class: "lede" },
+       "Canadian dollars into pounds at the CIBC rate, against a £1,000 limit."),
+  );
+  const card = el("div", { class: "card" });
+  root.append(card);
+
+  let summary;
+  try {
+    summary = await Api.get("/api/pounds");
+  } catch (err) {
+    card.append(el("div", { class: "form-msg error" }, err.message));
+    return;
+  }
+
+  card.append(poundsBar(summary));
+
+  const date = el("input", { type: "date", value: todayISO() });
+  const amount = el("input", { type: "number", min: "0", step: "0.01",
+                               placeholder: "250.00" });
+  const what = el("input", { type: "text", placeholder: "Tesco Metro" });
+  const category = el("input", { type: "text", placeholder: "Groceries" });
+  const preview = el("div", { class: "muted mono",
+                              style: "font-size:.78rem; min-height:1.2em;" });
+
+  let quoting = null;
+  const showQuote = async () => {
+    const dollars = Number(amount.value);
+    if (!Number.isFinite(dollars) || dollars <= 0 || !date.value) {
+      preview.textContent = "";
+      return;
+    }
+    /* Which request answers last is not which was sent last. Tagging each
+     * one and dropping all but the newest stops a slow reply for an old
+     * amount overwriting the figure for what is on screen now. */
+    const mine = Symbol("quote");
+    quoting = mine;
+    try {
+      const { quote } = await Api.get(
+        `/api/pounds/quote?cadCents=${Math.round(dollars * 100)}`
+        + `&on=${date.value}`);
+      if (quoting !== mine) return;
+      preview.textContent =
+        `${quote.cad || ""}${quote.pounds ? " → " + quote.pounds : ""}`
+        + (quote.lagDays ? ` at the ${quote.rateDate} rate` : "")
+        + `, ${quote.fee} of that is the 2.5% markup`
+        + (quote.fits ? "" : " — this would put you over the limit");
+      preview.style.color = quote.fits ? "" : "#d03b3b";
+    } catch (err) {
+      if (quoting !== mine) return;
+      preview.textContent = err.message;
+      preview.style.color = "#d03b3b";
+    }
+  };
+  amount.addEventListener("input", showQuote);
+  date.addEventListener("change", showQuote);
+
+  const record = el("button", { class: "btn btn-teal" }, "Record it");
+  record.onclick = async () => {
+    const dollars = Number(amount.value);
+    if (!Number.isFinite(dollars) || dollars <= 0) {
+      return toast("Amount must be more than zero.", "error");
+    }
+    if (!what.value.trim()) return toast("Say what it was.", "error");
+    try {
+      const made = await Api.post("/api/pounds", {
+        spentOn: date.value,
+        description: what.value.trim(),
+        category: category.value.trim(),
+        cadCents: Math.round(dollars * 100),
+      });
+      toast(`${made.conversion.cad} recorded as ${made.conversion.pounds}.`,
+            "success");
+      renderPoundsView();
+    } catch (err) { toast(err.message, "error"); }
+  };
+
+  card.append(
+    el("h3", { style: "margin-top:1rem;" }, "Convert Canadian dollars"),
+    el("div", { style: "display:flex; gap:.75rem; flex-wrap:wrap;"
+                       + " align-items:flex-end;" }, [
+      field("Date", date, "0 0 10rem"),
+      field("Amount (CAD)", amount, "0 0 8rem"),
+      field("What was it", what, "1 1 14rem"),
+      field("Category", category, "0 0 10rem"),
+      el("div", { style: "margin-bottom:1.1rem;" }, record),
+    ]),
+    preview,
+  );
+
+  const listing = el("div", { class: "card" });
+  root.append(listing);
+  listing.append(el("h3", {}, "Converted"));
+
+  if (!summary.conversions.length) {
+    listing.append(el("div", { class: "empty-state" }, [
+      el("div", { class: "glyph" }, "£"),
+      "Nothing converted yet.",
+    ]));
+  } else {
+    const tbody = el("tbody");
+    summary.conversions.forEach((row) => {
+      const remove = el("button", { class: "btn btn-danger" }, "Remove");
+      remove.onclick = async () => {
+        try {
+          await Api.del(`/api/pounds/${row.id}`);
+          renderPoundsView();
+        } catch (err) { toast(err.message, "error"); }
+      };
+
+      /* A row whose date has no rate behind it says so in its own line
+       * rather than showing a zero, which would read as "free". */
+      const figures = row.error
+        ? [el("td", { class: "muted", colspan: "3" }, row.error)]
+        : [el("td", { class: "mono" }, row.pounds),
+           el("td", { class: "mono muted" }, row.fee),
+           el("td", { class: "mono muted" },
+              row.rateDate + (row.lagDays ? ` +${row.lagDays}d` : ""))];
+
+      tbody.append(el("tr", {}, [
+        el("td", { class: "mono" }, row.spentOn),
+        el("td", {}, [
+          el("div", {}, row.description),
+          row.category
+            ? el("div", { class: "muted", style: "font-size:.78rem;" },
+                 row.category)
+            : "",
+        ]),
+        el("td", { class: "mono" }, row.cad),
+        ...figures,
+        el("td", {}, remove),
+      ]));
+    });
+
+    listing.append(el("table", {}, [
+      el("thead", {}, el("tr", {}, [
+        el("th", {}, "Date"), el("th", {}, "What"), el("th", {}, "CAD"),
+        el("th", {}, "£"), el("th", {}, "Markup"), el("th", {}, "Rate from"),
+        el("th", {}, ""),
+      ])),
+      tbody,
+    ]));
+  }
+
+  root.append(el("p", { class: "muted", style: "font-size:.78rem;" },
+    `${summary.rates.days} business days of European Central Bank rates, `
+    + `${summary.rates.oldest} to ${summary.rates.newest}. There is no `
+    + `published CAD–GBP rate: it is crossed through the euro from two that `
+    + `are, both from the same day. The limit is a budget kept here, not `
+    + `anything your bank enforces.`));
 }
 
 /* ---------------------------------------------------------------- */
