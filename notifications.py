@@ -16,6 +16,8 @@ REMINDER_HOURS_BEFORE the
   appointment starts         -> reminder to both sides (scheduler.py drives this)
 IMMINENT_MINUTES_BEFORE it
   starts                     -> a second, shorter nudge to both sides
+the same, before a class
+  imported from the planner  -> a reminder to the one person it belongs to
 
 This module used to be five hundred lines because it also owned the message
 layout and the background timer. Those are now email_render.py and
@@ -31,6 +33,7 @@ from flask import current_app
 
 import database as db
 import mailer
+import schedule
 from email_render import details, lead_time, render, url, when
 
 log = logging.getLogger("almanac.notifications")
@@ -319,6 +322,69 @@ def send_imminent_reminders(now=None):
     if queued:
         log.info("imminent scan queued %s email(s)", queued)
     return queued
+
+
+def send_schedule_reminders(now=None):
+    """
+    Mail people before a class they imported from the planner.
+
+    The planner cannot do this itself. It is a file opened from disk, so it
+    can show a notification while its tab is open and nothing once it is
+    closed -- a file:// origin cannot register a service worker. Almanac has
+    a server, so this is the half that works with nothing open.
+
+    One message per event, marked on the row rather than in email_log: the
+    de-duplicating index there is declared WHERE appointment_id IS NOT NULL,
+    and a class is not an appointment. See schedule.py.
+
+    Returns the number of emails queued.
+    """
+    now = now or dt.datetime.now()
+    if not current_app.config.get("IMMINENT_ENABLED", True):
+        return 0
+
+    minutes = current_app.config["IMMINENT_MINUTES_BEFORE"]
+    queued = 0
+    for row in schedule.due_for_reminder(now, minutes):
+        if _remind_about_class(row, now):
+            queued += 1
+        # Marked whatever the mailer decided. A send that failed is recorded
+        # in email_log and retried from there; re-queueing it from here on
+        # the next scan would be a second message about one class.
+        schedule.mark_reminded(row["id"], now)
+
+    if queued:
+        log.info("schedule scan queued %s email(s)", queued)
+    return queued
+
+
+def _remind_about_class(row, now):
+    """One class reminder. Returns whether anything was queued."""
+    starts = f"{row['event_date']} {row['start_time']}"
+    try:
+        start = dt.datetime.strptime(starts, "%Y-%m-%d %H:%M")
+        away = max(0, int((start - now).total_seconds() // 60))
+        lead = "starting now" if away < 1 else f"in {away} minutes"
+    except ValueError:
+        lead = f"coming up at {row['start_time']}"
+
+    span = row["start_time"] + (f"-{row['end_time']}" if row["end_time"] else "")
+    text, html = render(
+        title="Coming up",
+        intro=[f"Hi {row['user_name']}, {row['title']} is {lead}."],
+        details=[("What", row["title"]), ("When", f"{row['event_date']} {span}")]
+                + ([("Kind", row["kind"])] if row["kind"] else []),
+        action=("Open Almanac", url("/")),
+        outro="This came from your planner. Re-import to update it.",
+    )
+    return bool(mailer.send(mailer.Message(
+        kind="schedule_soon",
+        to=row["user_email"],
+        subject=f"Coming up: {row['title']} at {row['start_time']}",
+        text=text,
+        html=html,
+        user_id=row["user_id"],
+    )))
 
 
 def _nudge_both_sides(appt, now):

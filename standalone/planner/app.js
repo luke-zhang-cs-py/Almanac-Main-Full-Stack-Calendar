@@ -988,6 +988,184 @@
     reader.readAsText(file);
   });
 
+  /* ================= reminders, while this tab is open =================
+
+     What this can and cannot do, measured rather than assumed:
+
+       * A notification shows over whatever you are looking at -- another
+         tab, another application, the browser minimised. It does not need
+         the planner to be the focused tab.
+       * It does NOT fire once the tab is closed. The only two mechanisms
+         that would (a service worker, or a scheduled notification trigger)
+         are both unavailable on a file:// origin: registering a worker
+         there fails with "The URL protocol of the current origin is not
+         supported", and Notification.prototype.showTrigger does not exist.
+         That is a property of opening a file from disk, not something this
+         code can work around. For reminding with nothing open at all, the
+         planner exports into Almanac, which has a server and can email.
+
+     Timers in a hidden tab are throttled to roughly once a minute. Rather
+     than depend on how often the tick actually runs, every tick recomputes
+     from the wall clock and the current events -- so a tick that arrives
+     late, or after the machine has been asleep, still finds everything now
+     inside the window. Nothing here counts ticks.
+
+     Which events are eligible is the one judgement call. An event's `tz` is
+     a *label*: the time is stored as written and the label says which zone
+     that clock is in. Nearly everything is UK-labelled, and for those the
+     stored time is the local one and the reminder is exact. For anything
+     labelled otherwise -- a match at "11:30 EST" -- the stored time is not
+     the local instant, and announcing then would be hours wrong. Rather
+     than guess an offset from a two-letter label, those are skipped and
+     counted in the note, because a notification at a demonstrably wrong
+     time is worse than no notification. */
+
+  var NOTIFY_KEY   = "sept-planner.notify.v1";
+  var NOTIFIED_KEY = "sept-planner.notified.v1";
+  var LEAD_MINUTES = 30;
+  var TICK_MS      = 30000;
+
+  var notifySettings = load(NOTIFY_KEY, { on: false });
+  var notified = load(NOTIFIED_KEY, {});
+
+  function canNotify(){ return typeof Notification !== "undefined"; }
+
+  /* Is this event's clock the local clock? See the note above. */
+  function localClock(date, e){
+    return !e.tz || e.tz === ukZone(date);
+  }
+
+  function startsAt(date, e){
+    var p = (e.time || "").split(":");
+    if (p.length < 2) return null;
+    var d = new Date(+date.slice(0, 4), +date.slice(5, 7) - 1,
+                     +date.slice(8, 10), +p[0], +p[1], 0, 0);
+    return isNaN(d.getTime()) ? null : d.getTime();
+  }
+
+  /* Anything starting within the lead time that has not been announced.
+     Today and tomorrow both, so something just after midnight is not missed
+     by a window that stopped at the end of the day. */
+  function dueSoon(now){
+    var out = [];
+    [currentISO(), addDays(currentISO(), 1)].forEach(function(date){
+      (events[date] || []).forEach(function(e){
+        if (e.done || !localClock(date, e)) return;
+        var at = startsAt(date, e);
+        if (at === null) return;
+        var away = at - now;
+        if (away >= 0 && away <= LEAD_MINUTES * 60000 && !notified[e.id]) {
+          out.push({ date: date, e: e, at: at, away: away });
+        }
+      });
+    });
+    return out;
+  }
+
+  function skippedCount(){
+    var n = 0;
+    [currentISO(), addDays(currentISO(), 1)].forEach(function(date){
+      (events[date] || []).forEach(function(e){
+        if (!e.done && !localClock(date, e)) n++;
+      });
+    });
+    return n;
+  }
+
+  /* Announced ids are remembered so closing and reopening the tab does not
+     announce the same class twice. Old ones are dropped after a few days,
+     which also clears out anything since deleted. */
+  function remember(id){
+    notified[id] = Date.now();
+    var cutoff = Date.now() - 3 * 86400000;
+    Object.keys(notified).forEach(function(k){
+      if (notified[k] < cutoff) delete notified[k];
+    });
+    save(NOTIFIED_KEY, notified);
+  }
+
+  function announce(item){
+    var mins = Math.round(item.away / 60000);
+    var body = (mins <= 1 ? "Starting now" : "In " + mins + " minutes")
+      + " · " + fmtSpan(item.e);
+    try {
+      new Notification(item.e.title, { body: body, tag: item.e.id });
+      remember(item.e.id);
+    } catch (err) {
+      /* Thrown rather than rejected if permission was revoked after the
+         toggle was switched on. Turning the toggle back off is more honest
+         than retrying every thirty seconds for the rest of the day. */
+      notifySettings.on = false;
+      save(NOTIFY_KEY, notifySettings);
+      renderNotify();
+    }
+  }
+
+  function checkReminders(){
+    if (!notifySettings.on || !canNotify()) return;
+    if (Notification.permission !== "granted") return;
+    dueSoon(Date.now()).forEach(announce);
+  }
+
+  function renderNotify(){
+    var btn = $("notifyBtn"), note = $("notifyMsg");
+    if (!canNotify()) {
+      btn.hidden = true;
+      note.textContent = "This browser has no notification support.";
+      return;
+    }
+
+    var on = notifySettings.on && Notification.permission === "granted";
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    btn.textContent = on
+      ? "Reminders on · " + LEAD_MINUTES + " min before"
+      : "Remind me " + LEAD_MINUTES + " min before events";
+
+    if (Notification.permission === "denied") {
+      note.textContent = "Notifications are blocked for this file in your "
+        + "browser settings, so nothing can be announced.";
+      return;
+    }
+    if (!on) {
+      note.textContent = "Off. Nothing is announced.";
+      return;
+    }
+
+    var skipped = skippedCount();
+    note.textContent =
+      "Only while this tab is open — a file opened from disk cannot run in "
+      + "the background, so closing it stops reminders."
+      + (skipped ? " " + skipped + " event(s) in the next two days keep "
+                 + "another timezone's clock and are not announced, because "
+                 + "the stored time is not the local one." : "");
+  }
+
+  $("notifyBtn").addEventListener("click", function(){
+    if (!canNotify()) return;
+    if (notifySettings.on) {
+      notifySettings.on = false;
+      save(NOTIFY_KEY, notifySettings);
+      renderNotify();
+      return;
+    }
+    Notification.requestPermission().then(function(state){
+      notifySettings.on = (state === "granted");
+      save(NOTIFY_KEY, notifySettings);
+      renderNotify();
+      checkReminders();
+    });
+  });
+
+  /* Returning to the tab is when a throttled timer is most likely to have
+     fallen behind, so catch up then rather than waiting for the next tick. */
+  document.addEventListener("visibilitychange", function(){
+    if (!document.hidden) checkReminders();
+  });
+
+  setInterval(checkReminders, TICK_MS);
+  renderNotify();
+  checkReminders();
+
   // If the page is left open across midnight, roll the greying and the counter over.
   setInterval(function(){
     var now = currentISO();

@@ -102,6 +102,7 @@ const NAV_BY_ROLE = {
     { id: "book", label: "Book an appointment" },
     { id: "my-appointments", label: "My appointments" },
     { id: "pounds", label: "Pound wallet" },
+    { id: "timetable", label: "My timetable" },
   ],
   provider: [
     { id: "schedule", label: "My schedule" },
@@ -109,12 +110,14 @@ const NAV_BY_ROLE = {
     { id: "offerings", label: "What I offer" },
     { id: "coffee", label: "Coffee chats" },
     { id: "pounds", label: "Pound wallet" },
+    { id: "timetable", label: "My timetable" },
   ],
   admin: [
     { id: "users", label: "Users" },
     { id: "all-appointments", label: "All appointments" },
     { id: "emails", label: "Email log" },
     { id: "pounds", label: "Pound wallet" },
+    { id: "timetable", label: "My timetable" },
   ],
 };
 
@@ -160,6 +163,7 @@ function selectView(viewId) {
     "all-appointments": renderAdminAppointmentsView,
     "emails": renderAdminEmailsView,
     "pounds": renderPoundsView,
+    "timetable": renderScheduleView,
   };
   (renderers[viewId] || (() => {}))();
 }
@@ -1162,6 +1166,149 @@ async function renderPoundsView() {
     + `published CAD–GBP rate: it is crossed through the euro from two that `
     + `are, both from the same day. The limit is a budget kept here, not `
     + `anything your bank enforces.`));
+}
+
+/* ---------------------------------------------------------------- */
+/* My timetable (imported from the planner)                            */
+/* ---------------------------------------------------------------- */
+
+/* The planner is a file you open from disk. It can raise a notification
+ * while its tab is open and nothing once it is closed, because a file://
+ * origin cannot register a service worker. This is the other half: import
+ * the same export here and the server mails you before each class with
+ * nothing open at all. The page says which of the two is doing the work,
+ * because somebody who imports a timetable and then closes everything
+ * should not have to guess. */
+
+async function renderScheduleView() {
+  const root = mainRoot();
+  root.innerHTML = "";
+  root.append(
+    el("h2", {}, "My timetable"),
+    el("p", { class: "lede" },
+       "Classes imported from the planner. Almanac emails you before each one."),
+  );
+
+  const card = el("div", { class: "card" });
+  root.append(card);
+
+  let data;
+  try {
+    data = await Api.get("/api/schedule");
+  } catch (err) {
+    card.append(el("div", { class: "form-msg error" }, err.message));
+    return;
+  }
+
+  const picker = el("input", {
+    type: "file", accept: "application/json,.json", style: "display:none;",
+  });
+  const importBtn = el("button", { class: "btn btn-teal" },
+                       "Import a planner backup");
+  importBtn.onclick = () => picker.click();
+
+  picker.onchange = () => {
+    const file = picker.files && picker.files[0];
+    /* Cleared before reading, so choosing the same file twice still fires a
+     * change event -- otherwise a failed import cannot be retried. */
+    picker.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      let payload;
+      try {
+        payload = JSON.parse(String(reader.result));
+      } catch (err) {
+        return toast("That file is not JSON.", "error");
+      }
+      try {
+        const { imported } = await Api.post("/api/schedule/import", payload);
+        toast(`${imported.added} added, ${imported.updated} updated`
+              + (imported.skipped ? `, ${imported.skipped} unreadable` : "")
+              + ".", "success");
+        renderScheduleView();
+      } catch (err) { toast(err.message, "error"); }
+    };
+    reader.onerror = () => toast("That file could not be read.", "error");
+    reader.readAsText(file);
+  };
+
+  const clearBtn = el("button", { class: "btn btn-danger" }, "Remove all");
+  clearBtn.onclick = async () => {
+    if (!data.count) return toast("There is nothing to remove.", "info");
+    try {
+      const { deleted } = await Api.del("/api/schedule");
+      toast(`Removed ${deleted}.`, "success");
+      renderScheduleView();
+    } catch (err) { toast(err.message, "error"); }
+  };
+
+  card.append(
+    el("div", { style: "display:flex; gap:.6rem; flex-wrap:wrap;" },
+       [importBtn, clearBtn, picker]),
+    el("p", { class: "muted", style: "font-size:.8rem; margin-top:.6rem;" },
+       "In the planner, use Export backup, then import the file here. "
+       + "Importing the same export again updates what moved rather than "
+       + "adding it twice. Almanac emails you "
+       + `${data.remindsBeforeMinutes} minutes before each class — that `
+       + "works with nothing open, which the planner itself cannot do."),
+  );
+
+  const listing = el("div", { class: "card" });
+  root.append(listing);
+  listing.append(el("h3", {},
+    data.count ? `${data.count} imported · ${data.upcomingCount} still to come`
+               : "Nothing imported yet"));
+
+  if (!data.count) {
+    listing.append(el("div", { class: "empty-state" }, [
+      el("div", { class: "glyph" }, "🗓"),
+      "Export from the planner and import it above.",
+    ]));
+    return;
+  }
+
+  const tbody = el("tbody");
+  data.events.forEach((ev) => {
+    const remove = el("button", { class: "btn btn-danger" }, "Remove");
+    remove.onclick = async () => {
+      try {
+        await Api.del(`/api/schedule/${ev.id}`);
+        renderScheduleView();
+      } catch (err) { toast(err.message, "error"); }
+    };
+
+    /* A class kept on another clock is shown but never reminded about.
+     * Saying which is better than a reminder that silently never comes. */
+    const reminder = ev.localClock
+      ? (ev.remindedAt
+          ? el("span", { class: "muted" }, "reminded")
+          : el("span", { class: "status-pill confirmed" }, "will email"))
+      : el("span", {
+          class: "status-pill cancelled",
+          title: "The planner keeps this on another timezone's clock, so the "
+                 + "stored time is not the local one and a reminder would be "
+                 + "at the wrong moment.",
+        }, "no reminder");
+
+    tbody.append(el("tr", {}, [
+      el("td", { class: "mono" }, ev.eventDate),
+      el("td", { class: "mono" },
+         ev.startTime + (ev.endTime ? `–${ev.endTime}` : "")),
+      el("td", {}, ev.title),
+      el("td", { class: "muted" }, ev.kind || "—"),
+      el("td", {}, reminder),
+      el("td", {}, remove),
+    ]));
+  });
+
+  listing.append(el("table", {}, [
+    el("thead", {}, el("tr", {}, [
+      el("th", {}, "Date"), el("th", {}, "Time"), el("th", {}, "What"),
+      el("th", {}, "Kind"), el("th", {}, "Reminder"), el("th", {}, ""),
+    ])),
+    tbody,
+  ]));
 }
 
 /* ---------------------------------------------------------------- */

@@ -10,13 +10,15 @@ import scheduler
 
 
 def test_a_sweep_runs_every_part(ctx):
-    """Three now, not two: the day-before reminders, the half-hour nudges
-    and the coffee follow-ups. Naming the set rather than counting it is
-    what makes a part added and then never called show up here."""
+    """Four now: the day-before reminders, the half-hour nudges, the
+    timetable imported from the planner, and the coffee follow-ups. Naming
+    the set rather than counting it is what makes a part that was added and
+    then never called show up here."""
     result = scheduler.sweep()
-    assert set(result) == {"reminders", "imminent", "coffee"}
+    assert set(result) == {"reminders", "imminent", "schedule", "coffee"}
     assert result["reminders"] == 0
     assert result["imminent"] == 0
+    assert result["schedule"] == 0
     assert result["coffee"] == {"nudged": 0, "expired": 0}
 
 
@@ -33,6 +35,7 @@ def test_a_failing_nudge_sweep_does_not_stop_reminders(ctx, monkeypatch, booking
     assert result["coffee"] is None, "recorded as failed"
     assert result["reminders"] == 0, "and the others still ran"
     assert result["imminent"] == 0
+    assert result["schedule"] == 0
 
 
 def test_a_failing_reminder_scan_does_not_stop_nudges(ctx, monkeypatch):

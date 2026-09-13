@@ -76,8 +76,8 @@ def _loop(app, interval):
 
 
 def sweep():
-    """One pass: the day-before reminders, the half-hour nudges, then
-    coffee chat follow-ups.
+    """One pass: the day-before reminders, the half-hour nudges, the
+    imported timetable, then coffee chat follow-ups.
 
     Both rides on one tick rather than two timers, so the process keeps one
     background loop and one place for it to go wrong. Each half is isolated:
@@ -88,6 +88,7 @@ def sweep():
     results = {}
     for name, run in (("reminders", notifications.send_due_reminders),
                       ("imminent", notifications.send_imminent_reminders),
+                      ("schedule", notifications.send_schedule_reminders),
                       ("coffee", coffee_notifications.send_due_nudges)):
         try:
             results[name] = run()

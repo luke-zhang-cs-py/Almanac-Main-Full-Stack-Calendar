@@ -13,6 +13,7 @@ from routes.availability_routes import bp as availability_bp
 from routes.coffee_routes import bp as coffee_bp
 from routes.offering_routes import bp as offering_bp
 from routes.pound_routes import bp as pound_bp
+from routes.schedule_routes import bp as schedule_bp
 from routes.email_routes import bp as email_bp
 from routes.user_routes import bp as user_bp
 
@@ -41,6 +42,7 @@ def create_app():
     app.register_blueprint(coffee_bp)
     app.register_blueprint(offering_bp)
     app.register_blueprint(pound_bp)
+    app.register_blueprint(schedule_bp)
 
     with app.app_context():
         db.init_db()

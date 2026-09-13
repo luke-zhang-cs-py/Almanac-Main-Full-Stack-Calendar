@@ -315,6 +315,41 @@ CREATE TABLE IF NOT EXISTS pound_conversions (
 );
 CREATE INDEX IF NOT EXISTS idx_pound_conversions_user
     ON pound_conversions(user_id, spent_on);
+
+-- Personal schedule, imported from the standalone planner. Classes and the
+-- like: they have no second party, so they are not appointments and do not
+-- belong in that table.
+--
+-- reminded_at rather than leaning on email_log's unique index, which is
+-- declared WHERE appointment_id IS NOT NULL and so de-duplicates nothing for
+-- a row that is not an appointment -- every scan across the window would
+-- send again. Adding a column to email_log would not help either: the schema
+-- is CREATE TABLE IF NOT EXISTS, so a new column never reaches a database
+-- that already exists. This table is new, so its column is really there.
+--
+-- local_clock is decided at import. The planner stores a time as written
+-- with a timezone label beside it, so a class labelled EST is not the local
+-- instant; those are imported and shown, but never reminded about, because
+-- a reminder at a demonstrably wrong time is worse than none.
+CREATE TABLE IF NOT EXISTS schedule_events (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    source_id   TEXT NOT NULL,
+    event_date  TEXT NOT NULL,
+    start_time  TEXT NOT NULL,
+    end_time    TEXT,
+    title       TEXT NOT NULL,
+    kind        TEXT,
+    local_clock INTEGER NOT NULL DEFAULT 1,
+    reminded_at TEXT,
+    created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%S', 'now', 'localtime'))
+);
+-- Re-importing the same export updates rather than duplicates.
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_schedule_source
+    ON schedule_events (user_id, source_id);
+CREATE INDEX IF NOT EXISTS idx_schedule_due
+    ON schedule_events (event_date, start_time);
+
 """
 
 SCHEMA_POSTGRES = """
@@ -437,6 +472,26 @@ CREATE TABLE IF NOT EXISTS pound_conversions (
 );
 CREATE INDEX IF NOT EXISTS idx_pound_conversions_user
     ON pound_conversions(user_id, spent_on);
+
+-- The SQLite copy above carries the reasoning; this is the same table.
+CREATE TABLE IF NOT EXISTS schedule_events (
+    id          SERIAL PRIMARY KEY,
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    source_id   TEXT NOT NULL,
+    event_date  TEXT NOT NULL,
+    start_time  TEXT NOT NULL,
+    end_time    TEXT,
+    title       TEXT NOT NULL,
+    kind        TEXT,
+    local_clock INTEGER NOT NULL DEFAULT 1,
+    reminded_at TEXT,
+    created_at  TEXT NOT NULL DEFAULT (to_char(now(), 'YYYY-MM-DD"T"HH24:MI:SS'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_schedule_source
+    ON schedule_events (user_id, source_id);
+CREATE INDEX IF NOT EXISTS idx_schedule_due
+    ON schedule_events (event_date, start_time);
+
 """
 
 

@@ -41,7 +41,8 @@ def app():
 
     with flask_app.app_context():
         conn = db.get_db()
-        for table in ("pound_conversions", "coffee_invites", "offerings",
+        for table in ("schedule_events", "pound_conversions",
+                      "coffee_invites", "offerings",
                       "email_log", "appointments", "blocked_slots",
                       "availability", "users"):
             conn.execute(f"DROP TABLE IF EXISTS {table}")

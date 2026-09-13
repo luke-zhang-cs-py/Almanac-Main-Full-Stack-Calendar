@@ -188,6 +188,174 @@ def test_building_with_a_missing_seed_is_refused(tmp_path):
 # --------------------------------------------------------------- it runs
 
 
+def run_in_planner(built, setup, settle=900):
+    """Open the built planner from disk with `setup` injected before it
+    boots, and return what it reported.
+
+    `setup` runs first, so it can seed localStorage and stand in for browser
+    APIs the page would otherwise need a human to approve.
+    """
+    folder = tempfile.mkdtemp()
+    try:
+        probe = (
+            "<script>window.addEventListener('load', function () {"
+            "window.setTimeout(function () {"
+            "  var out = document.createElement('pre');"
+            "  out.id = 'PROBE';"
+            "  out.textContent = 'PROBE ' + JSON.stringify(window.__report());"
+            "  document.body.insertBefore(out, document.body.firstChild);"
+            "}, %d); });</script>" % settle
+        )
+        page = built.replace("<script>", "<script>%s</script>\n<script>"
+                             % setup, 1)
+        page = page.replace("</body>", probe + "</body>", 1)
+        path = os.path.join(folder, "planner.html")
+        with io.open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(page)
+
+        done = subprocess.run(
+            [browser(), "--headless=new", "--disable-gpu", "--no-sandbox",
+             "--no-first-run", "--no-default-browser-check",
+             "--user-data-dir=" + os.path.join(folder, "profile"),
+             "--virtual-time-budget=20000", "--dump-dom",
+             "file:///" + path.replace("\\", "/")],
+            capture_output=True, timeout=300)
+        dom = done.stdout.decode("utf-8", "replace")
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
+
+    found = re.search(r"PROBE (\{.*?\})</pre>", dom, re.S)
+    assert found, f"the planner did not report; {len(dom)} bytes of DOM"
+    import html as htmllib
+    return json.loads(htmllib.unescape(found.group(1)))
+
+
+# Stands in for the Notification API, which otherwise needs a human to click
+# "Allow". Everything the planner asks of it -- the constructor, .permission
+# and .requestPermission -- is here, and every call is recorded.
+NOTIFY_STUB = """
+window.__sent = [];
+window.Notification = function (title, opts) {
+  window.__sent.push({ title: title, body: (opts || {}).body,
+                       tag: (opts || {}).tag });
+};
+window.Notification.permission = 'granted';
+window.Notification.requestPermission = function () {
+  return Promise.resolve('granted');
+};
+window.__report = function () {
+  return {
+    sent: window.__sent,
+    note: (document.getElementById('notifyMsg') || {}).textContent,
+    button: (document.getElementById('notifyBtn') || {}).textContent,
+    pressed: (document.getElementById('notifyBtn') || {})
+               .getAttribute('aria-pressed'),
+    remembered: Object.keys(
+      JSON.parse(localStorage.getItem('sept-planner.notified.v1') || '{}'))
+  };
+};
+"""
+
+
+def seed_events(minutes_ahead, extra="", on=True):
+    """localStorage holding one event that many minutes away, plus whatever
+    `extra` adds. The seed flags are pre-set so the sample term and fixtures
+    are not laid on top of the case under test."""
+    return NOTIFY_STUB + """
+(function () {
+  function two(n) { return String(n).padStart(2, '0'); }
+  var at = new Date(Date.now() + %d * 60000);
+  var date = at.getFullYear() + '-' + two(at.getMonth() + 1) + '-'
+           + two(at.getDate());
+  var time = two(at.getHours()) + ':' + two(at.getMinutes());
+  var events = {};
+  events[date] = [{ id: 'probe-local', time: time, end: '23:59',
+                    title: 'Local class', type: 'class', done: false }];
+  %s
+  localStorage.setItem('sept-planner.events.v1', JSON.stringify(events));
+  localStorage.setItem('sept-planner.notify.v1', JSON.stringify({on: %s}));
+  ['sept-planner.seed.sample-fixtures.v1',
+   'sept-planner.seed.sample-term.v1',
+   'sept-planner.seed.sample-diary.v1'].forEach(function (k) {
+    localStorage.setItem(k, 'true');
+  });
+}());
+""" % (minutes_ahead, extra, "true" if on else "false")
+
+
+@pytest.mark.skipif(not browser(), reason="no browser to open the file in")
+def test_an_event_inside_the_window_is_announced(built):
+    got = run_in_planner(built, seed_events(20))
+    assert len(got["sent"]) == 1, got["sent"]
+    assert got["sent"][0]["title"] == "Local class"
+    assert "minutes" in got["sent"][0]["body"], got["sent"][0]["body"]
+    assert got["remembered"] == ["probe-local"], (
+        "it did not record that it had announced this one")
+
+
+@pytest.mark.skipif(not browser(), reason="no browser to open the file in")
+def test_an_event_beyond_the_window_is_not_announced(built):
+    """The lead is 30 minutes; this one is 90 away."""
+    got = run_in_planner(built, seed_events(90))
+    assert got["sent"] == []
+    assert got["remembered"] == []
+
+
+@pytest.mark.skipif(not browser(), reason="no browser to open the file in")
+def test_an_event_that_already_started_is_not_announced(built):
+    """A reminder for something you are late to is noise."""
+    got = run_in_planner(built, seed_events(-10))
+    assert got["sent"] == []
+
+
+@pytest.mark.skipif(not browser(), reason="no browser to open the file in")
+def test_an_event_on_another_clock_is_skipped_and_counted(built):
+    """`tz` is a display label, so a time labelled EST is not the local
+    instant. Announcing it on the local clock would be hours wrong, so it is
+    skipped -- and the note says so rather than leaving it a mystery."""
+    extra = ("events[date].push({ id: 'probe-far', time: time, end: '23:59',"
+             " title: 'Far match', type: 'match', tz: 'EST', done: false });")
+    got = run_in_planner(built, seed_events(20, extra))
+    titles = [n["title"] for n in got["sent"]]
+    assert titles == ["Local class"], titles
+    assert "another timezone" in got["note"], got["note"]
+
+
+@pytest.mark.skipif(not browser(), reason="no browser to open the file in")
+def test_a_finished_event_is_not_announced(built):
+    extra = "events[date][0].done = true;"
+    got = run_in_planner(built, seed_events(20, extra))
+    assert got["sent"] == []
+
+
+@pytest.mark.skipif(not browser(), reason="no browser to open the file in")
+def test_nothing_is_announced_twice(built):
+    """The id is remembered, so reopening the file does not announce the
+    same class again -- the tick also runs every thirty seconds."""
+    extra = ("localStorage.setItem('sept-planner.notified.v1',"
+             " JSON.stringify({'probe-local': Date.now()}));")
+    got = run_in_planner(built, seed_events(20, extra))
+    assert got["sent"] == [], "it announced one it had already announced"
+
+
+@pytest.mark.skipif(not browser(), reason="no browser to open the file in")
+def test_reminders_stay_off_until_they_are_turned_on(built):
+    got = run_in_planner(built, seed_events(20, on=False))
+    assert got["sent"] == []
+    assert got["pressed"] == "false"
+    assert "Off" in got["note"], got["note"]
+
+
+@pytest.mark.skipif(not browser(), reason="no browser to open the file in")
+def test_the_page_says_it_only_works_while_the_tab_is_open(built):
+    """The honest limit, stated where somebody switching it on will read it:
+    a file:// page cannot register a service worker, so there is nothing to
+    run once the tab is gone."""
+    got = run_in_planner(built, seed_events(20))
+    assert "while this tab is open" in got["note"], got["note"]
+    assert got["pressed"] == "true"
+
+
 @pytest.mark.skipif(not browser(), reason="no browser to open the file in")
 def test_it_seeds_and_renders_from_disk(built):
     """Opened from disk, where it is actually used. The seed runs once into
