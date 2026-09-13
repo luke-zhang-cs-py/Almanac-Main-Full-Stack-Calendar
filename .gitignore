@@ -24,3 +24,6 @@ login_users.db
 planner-data.js
 standalone/planner/data.js
 september-planner.html
+
+# Coverage JSON, written by tooling when inspecting gaps.
+cov.json
