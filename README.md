@@ -1,10 +1,10 @@
 # Almanac — Multi-Role Appointment Booking Platform
 
-[![CI](https://github.com/luke-zhang-cs-py/Full-Stack-Calendar-Software/actions/workflows/python-package.yml/badge.svg)](https://github.com/luke-zhang-cs-py/Full-Stack-Calendar-Software/actions/workflows/python-package.yml)
+[![CI](https://github.com/luke-zhang-cs-py/Almanac-Main-Full-Stack-Calendar/actions/workflows/python-package.yml/badge.svg)](https://github.com/luke-zhang-cs-py/Almanac-Main-Full-Stack-Calendar/actions/workflows/python-package.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.12-blue.svg)](https://www.python.org/)
 
-**[Read the overview →](https://luke-zhang-cs-py.github.io/Full-Stack-Calendar-Software/)**
+**[Read the overview →](https://luke-zhang-cs-py.github.io/Almanac-Main-Full-Stack-Calendar/)**
 — what a free slot has to survive, how five kinds of email get sent exactly
 once, and every bug this thing has had.
 
@@ -116,7 +116,7 @@ before clients can book them.
 
 For a map of the whole system — every file, the email pipeline, the schema,
 the API surface — it is published alongside the overview at
-[/architecture.html](https://luke-zhang-cs-py.github.io/Full-Stack-Calendar-Software/architecture.html),
+[/architecture.html](https://luke-zhang-cs-py.github.io/Almanac-Main-Full-Stack-Calendar/architecture.html),
 or open `docs/architecture.html` locally.
 
 ## Moving to a cloud database
