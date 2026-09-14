@@ -393,12 +393,12 @@ var TESTS = [
   { file: 'test_coffee_edges.py',         n: 13, of: 'expired links, lost races, and payloads nobody meant to send' },
   { file: 'test_calendar_logic.py',       n: 12, of: 'the slot engine' },
   { file: 'test_timestamps.py',           n: 12, of: 'that every timestamp is written the same way' },
+  { file: 'test_published_figures.py',    n: 11, of: 'the numbers on this page, against a fresh measurement' },
   { file: 'test_delivery.py',             n: 10, of: 'the SMTP conversation, and the sweep that drives it' },
-  { file: 'test_scheduler.py',            n: 10, of: 'the background sweep' },
-  { file: 'test_published_figures.py',    n:  9, of: 'the numbers on this page, against a fresh measurement' }
+  { file: 'test_scheduler.py',            n: 10, of: 'the background sweep' }
 ];
 
-var TEST_LINES = 5443;
+var TEST_LINES = 5606;
 
 /* Which interpreter produced the statement counts above. It matters: coverage
  * counts a `with` block or a multi-line call differently between versions, so
@@ -702,9 +702,9 @@ el('footNote').textContent =
   'runs on your own machine and binds loopback by default.';
 
 el('footNote').textContent += ' The statement counts were produced by ' +
-  MEASURED_WITH + ': coverage counts statements differently between versions, so the
-  figure is a property of the code and the interpreter together, and the check that
-  guards it compares only like with like.';
+  MEASURED_WITH + ': coverage counts statements differently between ' +
+  'versions, so the figure is a property of the code and the interpreter ' +
+  'together, and the check that guards it compares only like with like.';
 
 drawTiles();
 drawModules();
