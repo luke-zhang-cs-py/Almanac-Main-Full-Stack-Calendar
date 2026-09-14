@@ -89,7 +89,7 @@ requirements.txt
 ```bash
 pip install -r requirements.txt
 python seed_data.py        # creates admin@almanac.local / admin12345
-python app.py               # http://127.0.0.1:5000
+python app.py               # http://127.0.0.1:5003
 ```
 
 No `.env` needed to start — sensible defaults kick in (SQLite file,

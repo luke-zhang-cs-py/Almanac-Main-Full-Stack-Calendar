@@ -4,7 +4,7 @@ login_page.py — a single-file, self-contained login/register server.
 Run it on its own:
     pip install flask pyjwt werkzeug
     python login_page.py
-    -> open http://localhost:5000
+    -> open http://localhost:5006
 
 It creates its own SQLite file (login_users.db) next to this script and
 exposes /api/auth/register, /api/auth/login, /api/auth/me — the same
@@ -398,8 +398,18 @@ def index():
 
 if __name__ == "__main__":
     init_db()
-    port = int(os.environ.get("PORT", "5000"))
+    # Loopback, not 0.0.0.0. This is the same bug the main app had and had
+    # fixed -- see the note beside Config.HOST -- and the fix was never
+    # carried across to this file. With FLASK_DEBUG defaulting to 1, binding
+    # every interface put the Werkzeug debugger, an interactive Python
+    # console, in front of anyone on the network. A standalone demo is more
+    # likely to be run casually on a shared network, not less.
+    host = os.environ.get("HOST", "127.0.0.1")
+    # 5006, not 5000: 5000 is Toronto Transit's and 5003 is the Almanac app
+    # this file is a cut-down demo of, so the default collided with the very
+    # thing somebody would want running beside it.
+    port = int(os.environ.get("PORT", "5006"))
     debug = os.environ.get("FLASK_DEBUG", "1") == "1"
     print(f"Login page running at http://localhost:{port}")
     print(f"User database: {DB_PATH}")
-    app.run(host="0.0.0.0", port=port, debug=debug)
+    app.run(host=host, port=port, debug=debug)

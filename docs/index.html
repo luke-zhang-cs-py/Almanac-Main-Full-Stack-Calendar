@@ -357,7 +357,7 @@ var MODULES = [
   { name: 'app.py',                        lines:  81, stmts:  49, missed:  0, does: 'the factory and the blueprint registration' },
   { name: 'routes/email_routes.py',        lines:  89, stmts:  49, missed:  0, does: 'the admin delivery log, a test send, a manual scan' },
   { name: 'auth.py',                       lines:  84, stmts:  48, missed:  0, does: 'JWTs, and the two decorators that guard every route' },
-  { name: 'config.py',                     lines: 131, stmts:  45, missed:  0, does: 'every setting, from the environment — and the key check' },
+  { name: 'config.py',                     lines: 148, stmts:  46, missed:  0, does: 'every setting, from the environment — and the key check' },
   { name: 'scheduler.py',                  lines:  98, stmts:  42, missed:  0, does: 'the one background timer: reminders and coffee nudges' },
   { name: 'routes/schedule_routes.py',     lines:  86, stmts:  37, missed:  0, does: 'import a planner backup, list it, throw it away' },
   { name: 'routes/user_routes.py',         lines:  62, stmts:  32, missed:  0, does: 'providers, and the admin user list' },
@@ -367,7 +367,7 @@ var MODULES = [
 /* Left out of coverage on purpose, and named here so the omission is visible
  * rather than silent. */
 var OMITTED = [
-  { name: 'login_page.py', lines: 405, why: 'a deliberately standalone demo server with its own database' },
+  { name: 'login_page.py', lines: 415, why: 'a deliberately standalone demo server with its own database' },
   { name: 'seed_luke.py',  lines: 278, why: 'seeds a provider with hours and a catalogue' },
   { name: 'seed_data.py',  lines:  32, why: 'seeds the demo accounts' }
 ];

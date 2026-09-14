@@ -45,7 +45,16 @@ class Config:
     # could run code as this process. Set HOST=0.0.0.0 deliberately when you
     # actually want that, and turn DEBUG off when you do.
     HOST = os.environ.get("HOST", "127.0.0.1")
-    PORT = int(os.environ.get("PORT", "5000"))
+
+    # 5003 is this project's slot. The six apps in this family each get one
+    # -- transit 5000, face 5001, spam 5002, Almanac 5003, wallet 5004,
+    # tally 5005 -- so several can run at once, which is the normal state
+    # when they are being compared. This defaulted to 5000 and therefore
+    # collided with Toronto Transit: whichever started second failed to
+    # bind. The published overview and CONTRIBUTING.md already said 5003;
+    # the code was the one that disagreed.
+    DEFAULT_PORT = 5003
+    PORT = int(os.environ.get("PORT", str(DEFAULT_PORT)))
     DEBUG = os.environ.get("FLASK_DEBUG", "1") == "1"
 
     # --- Email ------------------------------------------------------------
@@ -67,7 +76,15 @@ class Config:
     SMTP_TIMEOUT = int(os.environ.get("SMTP_TIMEOUT", "20"))
 
     # Used to build links inside emails ("View your appointments").
-    APP_BASE_URL = os.environ.get("APP_BASE_URL", "http://localhost:5000").rstrip("/")
+    #
+    # Derived from PORT rather than written out again: these were two
+    # separate literal 5000s, so moving the app to another port left every
+    # emailed link pointing at nothing -- and the link is the whole content
+    # of a confirmation email. Still overridable on its own, because in
+    # production the public URL is a domain and has no relation to the port
+    # the process happens to bind.
+    APP_BASE_URL = os.environ.get(
+        "APP_BASE_URL", "http://localhost:%d" % PORT).rstrip("/")
 
     # --- Automatic reminders ----------------------------------------------
     # A background thread scans for appointments starting within
