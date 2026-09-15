@@ -74,6 +74,60 @@ converted explicitly. Now both do.
 was extracted in the first pass. Flake8 F841 caught them the moment the file
 was touched again.
 
+**6. The planner's reminder switch needed two clicks and never looked on.**
+Two faults in one control, both from the same cause — two readers of one
+piece of state that did not agree. The click handler asked
+`notifySettings.on`; the button rendered
+`notifySettings.on && Notification.permission === "granted"`. Those diverge
+whenever the stored flag outlives the permission, which is what Chrome
+leaves behind for a `file://` page between sessions: the button read "off",
+so the first click took the *turn-off* branch and cleared a flag that was
+already displaying as off. Nothing visible happened, and only the second
+click turned it on. Now one predicate, `remindersOn()`, serves both, a stale
+flag is reconciled at load, and the handler neither re-asks for a permission
+it already holds nor asks when it is already denied. Either half of that fix
+alone stops the double click, so the mutation test has to revert both to
+reproduce the bug; reverting one leaves the behaviour correct.
+
+The other half was cosmetic and worse for it. Turning reminders on changed
+only the label, in `--text-faint`, beside another faint underlined link — the
+state was semantically true and invisible. It is now a lit accent pill with a
+dot, and the hint leads with "Reminders are ON" rather than opening on
+caveats about background tabs.
+
+**7. The 30-minute email read another timezone's clock as the local one.**
+`dueSoon` (the notifications) skipped events failing `localClock(date, e)`;
+`startingWithin` (the email) did not, so an event stored on EST was
+announced at its EST time as though it were local and the subject
+over-counted. The gatherer now applies the same rule and, rather than
+silently dropping those events, counts them and says so in one line — an
+omission you are told about is a caveat, one you are not is a lie.
+
+The seeded timetable is the same defect waiting to happen: `ukZone()` is
+what `localClock()` compares against, so any generated row dated on or after
+25 October has to carry `GMT`. A BST label on a December event un-reminds
+it, silently. The generator derives the label from the date with the page's
+own rule, and a check asserts all 122 rows agree with it.
+
+**Not a bug, but it belongs here.** The planner cannot send mail. It has no
+network access under its own CSP, so the "email me" control is a `mailto:`
+handing a filled-in message to whatever client is already signed in as the
+account. There is no send to exercise from here and no credentials to do it
+with. Everything up to that click is testable, and that is what is tested:
+the real `buildReminderMail()` driven across five scenarios, each result
+parsed back out of the `mailto:` and checked for address, subject and body.
+
+**A measurement trap worth recording.** Three probes reported that the
+on-state styling was not applying, and all three were wrong — a screenshot
+showed it rendering correctly. Under Chrome's `--virtual-time-budget` the
+CSS animation clock does not advance, so every property under `transition:`
+reports its *start* value indefinitely, even one just assigned inline. The
+tell is a split result: `font-weight` and `padding` apply instantly while
+`color`, `background-color` and `border-color` all read as unchanged, which
+looks exactly like a failing `var()` and sent me through the whole CSSOM
+first. Probes that measure computed style now inject
+`transition:none !important` before reading anything.
+
 ## Findings
 
 ### Bloaters

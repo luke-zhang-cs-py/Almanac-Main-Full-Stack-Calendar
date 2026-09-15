@@ -50,6 +50,17 @@
   .quiet:hover{color:var(--accent);border-color:var(--accent)}
   .linkbtn{background:none;border:none;color:var(--text-faint);padding:8px 0 0;font-size:12px;text-decoration:underline;text-underline-offset:3px}
   .linkbtn:hover{color:var(--text)}
+  /* The reminder switch, on. It used to change only its label -- faint grey
+     text, in a row beside another faint grey link -- so turning reminders
+     on was semantically true and invisible. The on state is a lit pill with
+     a dot, and it drops the underline, so the state is the first thing you
+     see rather than something to read. */
+  #notifyBtn[aria-pressed="true"]{color:var(--accent);font-weight:600;
+      background:var(--accent-soft);border:1px solid var(--accent);
+      padding:4px 10px;text-decoration:none}
+  #notifyBtn[aria-pressed="true"]::before{content:"\25cf  ";font-size:10px}
+  #notifyBtn[aria-pressed="true"]:hover{color:var(--accent)}
+  #notifyMsg.live{color:var(--accent)}
 
   /* ---------- layout ---------- */
   .app{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:start}

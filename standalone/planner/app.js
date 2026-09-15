@@ -1164,6 +1164,32 @@
     dueSoon(Date.now()).forEach(announce);
   }
 
+  /* The single source of truth for whether reminders are running. Both the
+     button and its click handler read this, so neither can believe
+     something the other doesn't.
+
+     They used to disagree: the handler asked `notifySettings.on` while the
+     button showed `notifySettings.on && permission === "granted"`. When the
+     stored flag outlived the permission -- which is what a browser leaves
+     behind for a file:// page between sessions -- the button read "off" and
+     the first click took the turn-off branch, clearing a flag that was
+     already displaying as off. Nothing visible happened, and only the
+     second click turned reminders on. */
+  function remindersOn(){
+    return !!notifySettings.on && canNotify()
+        && Notification.permission === "granted";
+  }
+
+  /* A stored flag with no permission behind it is a lie about the state, so
+     it is cleared on the way in rather than left to confuse the next
+     click. */
+  function reconcileNotify(){
+    if (notifySettings.on && !remindersOn()) {
+      notifySettings.on = false;
+      save(NOTIFY_KEY, notifySettings);
+    }
+  }
+
   function renderNotify(){
     var btn = $("notifyBtn"), note = $("notifyMsg");
     if (!canNotify()) {
@@ -1172,7 +1198,7 @@
       return;
     }
 
-    var on = notifySettings.on && Notification.permission === "granted";
+    var on = remindersOn();
     btn.setAttribute("aria-pressed", on ? "true" : "false");
     btn.textContent = on
       ? "Reminders on · " + LEAD_MINUTES + " min before"
@@ -1184,13 +1210,19 @@
       return;
     }
     if (!on) {
-      note.textContent = "Off. Nothing is announced.";
+      note.classList.remove("live");
+      note.textContent = Notification.permission === "granted"
+        ? "Off. Click to turn reminders on."
+        : "Off. Clicking asks the browser for permission first.";
       return;
     }
+    note.classList.add("live");
 
     var skipped = skippedCount();
     note.textContent =
-      "Only while this tab is open — a file opened from disk cannot run in "
+      "Reminders are ON — you will be told "
+      + LEAD_MINUTES + " minutes before each event. "
+      + "Only while this tab is open: a file opened from disk cannot run in "
       + "the background, so closing it stops reminders."
       + (skipped ? " " + skipped + " event(s) in the next two days keep "
                  + "another timezone's clock and are not announced, because "
@@ -1199,17 +1231,40 @@
 
   $("notifyBtn").addEventListener("click", function(){
     if (!canNotify()) return;
-    if (notifySettings.on) {
+
+    if (remindersOn()) {                    // on -> off, one click
       notifySettings.on = false;
       save(NOTIFY_KEY, notifySettings);
       renderNotify();
       return;
     }
+
+    // Off -> on. When the permission is already granted there is nothing to
+    // ask for, so don't: asking again is what made this need a second
+    // click, and asking when the answer is already "denied" is a question
+    // with one possible answer.
+    if (Notification.permission === "granted") {
+      notifySettings.on = true;
+      save(NOTIFY_KEY, notifySettings);
+      renderNotify();
+      checkReminders();
+      return;
+    }
+
+    if (Notification.permission === "denied") {
+      renderNotify();                       // says why, and stays off
+      return;
+    }
+
     Notification.requestPermission().then(function(state){
       notifySettings.on = (state === "granted");
       save(NOTIFY_KEY, notifySettings);
       renderNotify();
-      checkReminders();
+      if (state === "granted") checkReminders();
+    }, function(){
+      notifySettings.on = false;            // the browser refused to ask
+      save(NOTIFY_KEY, notifySettings);
+      renderNotify();
     });
   });
 
@@ -1220,6 +1275,7 @@
   });
 
   setInterval(checkReminders, TICK_MS);
+  reconcileNotify();
   renderNotify();
   checkReminders();
 
@@ -1342,19 +1398,24 @@
      yet to be mentioned -- so it is asked separately rather than by
      loosening the notification rule. */
   function startingWithin(minutes){
-    var now = Date.now(), out = [];
+    var now = Date.now(), out = [], skipped = 0;
     [currentISO(), addDays(currentISO(), 1)].forEach(function(date){
       (events[date] || []).forEach(function(e){
         if (e.done) return;
         var at = startsAt(date, e);
         if (at === null) return;
         var away = at - now;
-        if (away >= 0 && away <= minutes * 60000) {
-          out.push({ date: date, e: e, away: away });
-        }
+        if (away < 0 || away > minutes * 60000) return;
+        // The same rule dueSoon applies. `startsAt` reads the stored time
+        // as a local one, so an event carrying another zone's clock would
+        // be reported as starting at a time it does not start at.
+        if (!localClock(date, e)) { skipped++; return; }
+        out.push({ date: date, e: e, away: away });
       });
     });
-    return out.sort(function(a, b){ return a.away - b.away; });
+    out.sort(function(a, b){ return a.away - b.away; });
+    out.skipped = skipped;
+    return out;
   }
 
   function buildReminderMail(){
@@ -1362,19 +1423,29 @@
     var subject, lines;
 
     if (!soon.length) {
-      subject = "Planner: nothing in the next " + LEAD_MINUTES + " minutes";
-      lines = ["No events start within " + LEAD_MINUTES + " minutes."];
+      subject = "Nothing in the next " + LEAD_MINUTES + " minutes";
+      lines = ["Nothing starts in the next " + LEAD_MINUTES + " minutes."];
     } else {
-      subject = "Planner: " + soon.length + " event(s) within "
-              + LEAD_MINUTES + " min \u2014 " + soon[0].e.title;
+      // The subject carries the one thing worth seeing on a lock screen:
+      // what is next, and when. A count only when there is more than one.
+      subject = fmtTime(soon[0].e.time) + " " + soon[0].e.title
+              + (soon.length > 1 ? " (+" + (soon.length - 1) + " more)" : "");
       lines = soon.map(function(item){
-        return "- " + fmtSpan(item.e) + "  " + item.e.title
-             + "  (in " + Math.round(item.away / 60000) + " min)";
+        return fmtTime(item.e.time) + "  " + item.e.title
+             + "  \u2014 in " + Math.round(item.away / 60000) + " min";
       });
     }
 
-    lines.push("");
-    lines.push("Sent from the planner on this machine.");
+    // Said out loud rather than left out. An event kept in another
+    // timezone's clock cannot be placed on this one, and a reminder that
+    // silently omits something is worse than one that admits the gap.
+    if (soon.skipped) {
+      lines.push("");
+      lines.push("Also " + soon.skipped
+               + (soon.skipped === 1 ? " event" : " events")
+               + " on another timezone's clock, not listed above. Open the "
+               + "day to see them.");
+    }
     return "mailto:" + encodeURIComponent(settings.email)
          + "?subject=" + encodeURIComponent(subject)
          + "&body=" + encodeURIComponent(lines.join("\n"));
