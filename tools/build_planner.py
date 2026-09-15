@@ -45,14 +45,20 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "standalone", "planner")
 SAMPLE = os.path.join(SRC, "data.sample.js")
 
+# No frame-ancestors. A <meta> CSP cannot deliver that directive: the
+# browser ignores it and logs a notice saying so, which means listing it
+# claimed a protection the file was not getting. It works only as an HTTP
+# header, and this file is opened over file://, where there is no header to
+# set and nothing to frame it. Every other directive here does apply, and
+# `default-src 'none'` with no connect-src is the one that matters: the file
+# cannot make a request, which is better than a promise not to.
 POLICY = (
     "default-src 'none'; "
     "script-src 'unsafe-inline'; "
     "style-src 'unsafe-inline'; "
     "img-src data:; "
     "base-uri 'none'; "
-    "form-action 'none'; "
-    "frame-ancestors 'none'"
+    "form-action 'none'"
 )
 
 BANNER = """<!--

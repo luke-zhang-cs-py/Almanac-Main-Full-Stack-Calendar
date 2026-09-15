@@ -182,6 +182,10 @@ footer a { color: inherit; }
     <a class="btn" href="https://github.com/luke-zhang-cs-py/Almanac-Main-Full-Stack-Calendar">Repository</a>
     <a class="btn" id="localBtn" href="http://127.0.0.1:5003/"
        title="Only works on a machine that is running the app">Open app (local)</a>
+    <!-- The one page here that needs nothing running. A test rebuilds it
+         from standalone/planner/ and fails if this copy has drifted. -->
+    <a class="btn" href="planner.html"
+       title="One self-contained file, no server, invented sample data">Open the planner</a>
   </div>
 </div>
 
@@ -374,9 +378,9 @@ var OMITTED = [
 
 var TESTS = [
   { file: 'test_appointments_api.py',     n: 36, of: 'booking, cancelling, completing, and who may do which' },
+  { file: 'test_planner.py',              n: 36, of: 'the standalone planner, and that no seed of anyone’s is committed with it' },
   { file: 'test_email_render.py',         n: 33, of: 'that the text and HTML halves cannot drift apart' },
   { file: 'test_coffee_chats.py',         n: 32, of: 'the invite lifecycle end to end' },
-  { file: 'test_planner.py',              n: 31, of: 'the standalone planner, and that no seed of anyone’s is committed with it' },
   { file: 'test_pounds.py',               n: 31, of: 'the cross rate and the markup, against the wallet fixture' },
   { file: 'test_notifications.py',        n: 29, of: 'what is said, on which occasion' },
   { file: 'test_hostile_input.py',        n: 27, of: 'what a provider can do to their own calendar' },
@@ -398,7 +402,7 @@ var TESTS = [
   { file: 'test_scheduler.py',            n: 10, of: 'the background sweep' }
 ];
 
-var TEST_LINES = 5794;
+var TEST_LINES = 5868;
 
 /* Which interpreter produced the statement counts above. It matters: coverage
  * counts a `with` block or a multi-line call differently between versions, so

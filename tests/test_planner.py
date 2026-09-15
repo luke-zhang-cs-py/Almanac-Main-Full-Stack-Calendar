@@ -509,3 +509,77 @@ def test_events_take_the_wide_column(built):
     events_at = built.index("Classes &amp; events")
     plan_at = built.index('id="planHead"')
     assert events_at < plan_at, "the plan column still comes first"
+
+
+# ------------------------------------------- the copy published on the page
+# docs/planner.html is a built artifact, which this repository otherwise
+# does not commit -- the .joblib files and the model weights in its siblings
+# are all ignored. It earns the exception by being the whole point of the
+# thing: a single file you open by double-clicking. Committing only the
+# sources means the quickest way to see it is to clone the repo and run
+# Python, which is the opposite of what it is for.
+#
+# The cost of a committed artifact is that it goes stale, so that is what
+# these check. A drifted copy fails CI rather than sitting there quietly
+# being a different program from the one in standalone/planner/.
+
+PUBLISHED = os.path.join(ROOT, "docs", "planner.html")
+
+
+def test_the_published_copy_exists():
+    assert os.path.isfile(PUBLISHED), (
+        "docs/planner.html is missing; rebuild it with "
+        "`python tools/build_planner.py --out docs/planner.html`")
+
+
+def test_the_published_copy_matches_a_fresh_build(built):
+    """Byte-for-byte against the sources, so it cannot drift.
+
+    The builder is deterministic apart from nothing -- there is no timestamp
+    in the output -- so this is a straight comparison. If it ever grows one,
+    this test is where that gets noticed.
+    """
+    with io.open(PUBLISHED, encoding="utf-8") as handle:
+        published = handle.read()
+    assert published == built, (
+        "docs/planner.html is out of date with standalone/planner/. "
+        "Rebuild: python tools/build_planner.py --out docs/planner.html")
+
+
+def test_the_published_copy_holds_the_invented_seed():
+    """It is served from a public page, so the one thing it must never carry
+    is somebody's real timetable. The shape checks above cover the sources;
+    this covers the built file, which is what people actually download."""
+    with io.open(PUBLISHED, encoding="utf-8") as handle:
+        published = handle.read()
+    assert "data.sample.js" in published, "the banner does not name the seed"
+    for what, pattern in PERSONAL_SHAPES.items():
+        found = [hit.group(0) for hit in re.finditer(pattern, published)]
+        assert not found, f"{what} in the published planner: {found}"
+
+
+def test_the_published_copy_is_self_contained():
+    """Someone downloading one file from a web page gets one file. A stray
+    src= would work on the Pages site and break the moment it is saved."""
+    with io.open(PUBLISHED, encoding="utf-8") as handle:
+        published = handle.read()
+    assert not builder.loose_references(published)
+
+
+def test_the_policy_claims_nothing_a_meta_tag_cannot_deliver():
+    """`frame-ancestors` in a <meta> CSP is ignored by the browser, which
+    logs a notice saying so. Listing it looked like protection and was not
+    providing any -- the same shape of mistake as a guard that cannot fail.
+
+    Checked here rather than left to a person noticing a console message,
+    because a console notice on a page nobody opens is a message nobody
+    reads."""
+    policy = re.search(r'Content-Security-Policy" content="([^"]*)"',
+                       builder.build())
+    assert policy, "the built file has no content policy"
+    assert "frame-ancestors" not in policy.group(1), (
+        "a meta CSP cannot deliver frame-ancestors; it only works as a header")
+    # The directives that do work are still there.
+    for directive in ("default-src 'none'", "form-action 'none'",
+                      "base-uri 'none'"):
+        assert directive in policy.group(1), directive
