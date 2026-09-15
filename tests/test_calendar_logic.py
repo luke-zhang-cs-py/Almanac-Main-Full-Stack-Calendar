@@ -109,3 +109,98 @@ def test_a_booking_cannot_straddle_a_taken_slot(ctx, provider, client):
                 headers={"Authorization": f"Bearer {token}"})
     assert not is_slot_free(provider["id"], day, "11:00", "12:00")
     assert is_slot_free(provider["id"], day, "11:45", "12:45")
+
+
+# ----------------------------------------------- today has a past to exclude
+# `_tile` drops any slot that has already started, but only for today: every
+# other date compares against -1, which no slot start can be at or below.
+#
+# That branch had 100% coverage and no test. It was being executed by
+# accident -- some test elsewhere asking for today's slots during working
+# hours -- so at 4am it stopped being covered and the figure moved. Coverage
+# that depends on what time the suite runs is not coverage, and the rule it
+# guards is one people care about: you cannot book a slot in the past.
+#
+# Tested through `_tile`, which takes `earliest` as an argument, so there is
+# no clock involved at all.
+
+def a_window(start="09:00", end="12:00", minutes=60):
+    return {"id": 1, "start_time": start, "end_time": end,
+            "slot_minutes": minutes}
+
+
+def test_a_window_with_no_past_keeps_every_slot():
+    """The control. -1 is what every date except today is compared against,
+    so nothing is dropped and the whole window tiles."""
+    from calendar_logic import _tile
+    slots = _tile(a_window(), busy=[], earliest=-1)
+    assert [s["start"] for s in slots] == ["09:00", "10:00", "11:00"]
+
+
+def test_slots_that_have_already_started_are_dropped():
+    from calendar_logic import _tile
+    # 10:30. The 09:00 and 10:00 slots have started; 11:00 has not.
+    slots = _tile(a_window(), busy=[], earliest=10 * 60 + 30)
+    assert [s["start"] for s in slots] == ["11:00"]
+
+
+def test_a_slot_starting_exactly_now_is_dropped():
+    """The boundary, and the reason the comparison is `<=` rather than `<`.
+    A slot starting this very minute is not bookable -- by the time anyone
+    confirms it, it has begun."""
+    from calendar_logic import _tile
+    slots = _tile(a_window(), busy=[], earliest=10 * 60)
+    assert [s["start"] for s in slots] == ["11:00"], (
+        "the slot starting exactly at `earliest` should not be offered")
+
+
+def test_a_window_entirely_in_the_past_offers_nothing():
+    """Not an error, and not the whole window either: asking for today at
+    six in the evening should return an empty list rather than this
+    morning's slots."""
+    from calendar_logic import _tile
+    assert _tile(a_window(), busy=[], earliest=23 * 60) == []
+
+
+def test_the_past_filter_and_the_busy_filter_both_apply():
+    """They are separate `continue`s over the same cursor, so a slot has to
+    clear both. 10:30 kills 09:00 and 10:00; the booking kills 11:00."""
+    from calendar_logic import _tile
+    slots = _tile(a_window(end="13:00"), busy=[(11 * 60, 12 * 60)],
+                  earliest=10 * 60 + 30)
+    assert [s["start"] for s in slots] == ["12:00"]
+
+
+def test_today_is_the_only_date_that_filters(ctx, provider, monkeypatch):
+    """End to end, with the clock pinned rather than waited for.
+
+    `get_free_slots` is the one that decides whether a past exists, by
+    comparing the requested date against `now.date()`. Both branches are
+    exercised here against the same frozen moment, so the test says the same
+    thing at 4am as at 4pm.
+    """
+    import calendar_logic
+
+    real = datetime.datetime
+    frozen = real(2026, 9, 16, 10, 30)      # a Wednesday, mid-morning
+
+    class Frozen(real):
+        @classmethod
+        def now(cls, tz=None):
+            return frozen
+
+    monkeypatch.setattr(calendar_logic.dt, "datetime", Frozen)
+
+    today = frozen.date().isoformat()
+    tomorrow = (frozen.date() + datetime.timedelta(days=1)).isoformat()
+
+    for_today = calendar_logic.get_free_slots(provider["id"], today)
+    for_tomorrow = calendar_logic.get_free_slots(provider["id"], tomorrow)
+
+    assert for_tomorrow, "a future weekday should offer its whole window"
+    assert for_tomorrow[0]["start"] == "09:00"
+    assert for_today, "mid-morning should still leave the afternoon"
+    assert all(s["start"] > "10:30" for s in for_today), (
+        "today offered a slot that had already started")
+    assert len(for_today) < len(for_tomorrow), (
+        "today should offer strictly fewer slots than the same window later")

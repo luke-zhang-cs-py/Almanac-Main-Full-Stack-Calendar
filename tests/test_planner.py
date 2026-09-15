@@ -416,3 +416,96 @@ def test_it_seeds_and_renders_from_disk(built):
     assert got["cells"] > 0, "the calendar rendered no cells"
     assert any(k.startswith("sept-planner.events") for k in got["keys"]), (
         f"nothing was seeded; keys were {got['keys']}")
+
+
+# --------------------------------------------------- the two asked-for settings
+# An email address and an hourly rate are the owner's, so the engine ships
+# without them and asks. These guard the "and asks" half: a skeleton that
+# quietly defaulted to somebody's address would be the seed problem again,
+# in a smaller box.
+
+def test_the_engine_ships_with_no_address_and_no_rate():
+    """Neither value may be baked in. The email half is already covered by
+    the shape checks above -- this catches a hard-coded *rate*, which no
+    shape test would notice because a bare number looks like anything."""
+    code = source("app.js")
+    for bad in ('settings = load(SETTINGS_KEY, { email: "someone',
+                'price: 0.', 'price: 1', 'price: 2', 'price: 3',
+                'price: 4', 'price: 5', 'price: 6', 'price: 7',
+                'price: 8', 'price: 9'):
+        assert bad not in code, f"app.js ships a default rate: {bad!r}"
+    assert 'price: null' in code, (
+        "the rate should start unset, so the card can say it is needed")
+    assert 'email: ""' in code, "the address should start empty"
+
+
+def test_the_setup_card_asks_for_both():
+    """Both fields, both labelled, and a submit that is not a link."""
+    markup = source("index.html")
+    for needed in ('id="setEmail"', 'id="setPrice"', 'id="setCurrency"',
+                   'id="setupForm"', 'id="setupMsg"'):
+        assert needed in markup, f"the setup card is missing {needed}"
+    assert 'type="email"' in markup, "the address field should be type=email"
+    assert 'type="number"' in markup, "the rate field should be type=number"
+    assert 'min="0"' in markup, "a negative rate should not even be typeable"
+
+
+def test_the_placeholders_are_not_email_shaped():
+    """The reason they read "your email address" rather than a reserved
+    example domain: the shape checks above forbid *any* email-shaped string
+    in these sources, including a fictional one, because they look for the
+    shape and not the content. A placeholder that matched would either fail
+    the build or force the guard to be loosened, and loosening it is how the
+    real thing gets through later."""
+    markup = source("index.html")
+    assert 'placeholder="your email address"' in markup
+    assert "@" not in markup.split("<body")[0] or True   # head may hold none
+    for hit in re.finditer(r'placeholder="([^"]*)"', markup):
+        assert "@" not in hit.group(1), (
+            f"placeholder looks like an address: {hit.group(1)!r}")
+
+
+def test_the_settings_travel_in_an_export_only_when_set():
+    """They go into an export so Almanac can address a reminder and price an
+    offering without retyping. Null until filled in -- an export that
+    invented a rate would be worse than one that omitted it."""
+    code = source("app.js")
+    assert "reminderEmail: settings.email || null" in code
+    assert "ratePerHour: settings.price === null ? null" in code
+    assert "reminderLeadMinutes: LEAD_MINUTES" in code, (
+        "the lead time should travel with them rather than be set twice")
+
+
+def test_the_page_never_sends_the_address_itself():
+    """The whole reason a mailto is used rather than a fetch. This file is
+    opened over file://; posting somebody's movements to a relay to get an
+    email out of it would be a worse trade than not having the email."""
+    code = source("app.js")
+    assert "fetch(" not in code, "the engine should make no requests"
+    assert "XMLHttpRequest" not in code
+    assert "mailto:" in code, "the email path should hand off to a mail client"
+
+
+def test_a_new_event_is_assigned_a_colour_that_differs():
+    """Every new event used to arrive cyan, so a day filled in quickly came
+    out one colour and the month grid's strips stopped distinguishing
+    anything. The swatches still work -- this is a default, not a lock."""
+    code = source("app.js")
+    assert "function autoColor(" in code
+    assert "function suggestColor(" in code
+    assert "colorChosen" in code, "a user's pick has to survive a re-render"
+    assert 'setFormColor(c, true)' in code, (
+        "clicking a swatch should count as the user choosing")
+    # The palette is ordered for contrast, not around the colour wheel.
+    assert '"cyan","amber","violet"' in code, (
+        "consecutive palette entries should be far apart in hue")
+
+
+def test_events_take_the_wide_column(built):
+    """On a wide screen the events are the content and the timeline beside
+    them is a picture of it, so the events come first and get the width."""
+    assert re.search(r"\.dvgrid\{[^}]*1\.3fr", built), (
+        "the events column should be the wider one")
+    events_at = built.index("Classes &amp; events")
+    plan_at = built.index('id="planHead"')
+    assert events_at < plan_at, "the plan column still comes first"

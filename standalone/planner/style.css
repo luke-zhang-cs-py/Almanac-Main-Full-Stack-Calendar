@@ -175,9 +175,23 @@
   .cardhead{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:16px}
   .dvtitle{margin:0;font-size:15px;font-weight:600}
   .dvtitle span{color:var(--text-faint);font:11px var(--mono);font-weight:400;margin-left:8px}
-  .dvgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:26px}
+  /* Events take the wider column on a wide screen: they are the content,
+     and the timeline beside them is a picture of it. 1.3/1 rather than 1/1
+     -- enough that event titles stop wrapping, not so much that the hour
+     labels crowd. Collapses to one column below 900px, further down. */
+  .dvgrid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:26px}
   .colhead{margin:0 0 9px;font-size:11.5px;font-weight:600;color:var(--text-faint)}
   .colhead.sp{margin-top:22px}
+
+  /* Setup: the two things the file cannot know about you. Outlined while
+     either is unset, so a blank planner says what it needs instead of
+     quietly doing nothing when you turn reminders on. */
+  .setup.needed{border-color:var(--accent)}
+  .setuplabel{display:block;margin:2px 0 5px;font-size:11px;color:var(--text-faint)}
+  .setuplabel + .row{margin-bottom:10px}
+  .setup input[type=email]{flex:1 1 auto;min-width:0}
+  .setup input[type=number]{flex:0 1 96px;min-width:0}
+  .setup select{flex:0 0 auto}
 
   /* proportional day timeline: 1 minute = HOUR_PX/60 pixels */
   .timeline{position:relative}

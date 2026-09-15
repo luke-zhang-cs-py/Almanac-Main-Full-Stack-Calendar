@@ -33,13 +33,13 @@
           <button class="del" id="dvClose" type="button" aria-label="Collapse day">&times;</button>
         </div>
 
+        <!-- Events first, Plan second. On a wide screen the first column is
+             where the eye lands and the one that gets the extra width, and
+             the events are what you came to read or edit; the timeline is a
+             picture of them. Source order matches visual order, so a narrow
+             screen and a screen reader get the same thing rather than it
+             being faked with `order` in CSS. -->
         <div class="dvgrid">
-          <div>
-            <h3 class="colhead" id="planHead">Plan</h3>
-            <div class="timeline" id="hours"></div>
-            <p class="hint" id="planNote" hidden></p>
-          </div>
-
           <div>
             <h3 class="colhead">Classes &amp; events</h3>
             <ul class="evlist" id="evList"></ul>
@@ -87,11 +87,54 @@
               </div>
             </form>
           </div>
+
+          <div>
+            <h3 class="colhead" id="planHead">Plan</h3>
+            <div class="timeline" id="hours"></div>
+            <p class="hint" id="planNote" hidden></p>
+          </div>
         </div>
       </section>
     </div>
 
     <aside class="side">
+      <!-- Asked for, never shipped.
+           This repository holds the engine and no seed, and the same rule
+           applies to these two settings: an address and a rate are the
+           owner's, so the file arrives blank and asks. Both live in this
+           browser's localStorage and travel only in an export you make
+           yourself.
+
+           The placeholders deliberately contain no "@". tests/test_planner.py
+           forbids any email-shaped string in these sources -- including a
+           reserved-for-fiction one -- because the check looks for the shape
+           rather than the content, and a placeholder that matched it would
+           either fail the build or force the guard to be loosened. -->
+      <section class="card setup" id="setupCard">
+        <h2 class="cardtitle">Setup <span class="count" id="setupState"></span></h2>
+        <form class="addform" id="setupForm">
+          <label class="setuplabel" for="setEmail">Where reminders go</label>
+          <div class="row">
+            <input type="email" id="setEmail" placeholder="your email address"
+                   maxlength="120" autocomplete="email" aria-label="Reminder email address">
+          </div>
+
+          <label class="setuplabel" for="setPrice">Your rate, per hour</label>
+          <div class="row">
+            <select id="setCurrency" aria-label="Currency">
+              <option value="GBP">£ GBP</option>
+              <option value="CAD">$ CAD</option>
+              <option value="USD">$ USD</option>
+              <option value="EUR">&euro; EUR</option>
+            </select>
+            <input type="number" id="setPrice" placeholder="0.00" min="0" max="100000"
+                   step="0.01" inputmode="decimal" aria-label="Rate per hour">
+            <button class="primary" type="submit">Save</button>
+          </div>
+        </form>
+        <p class="hint" id="setupMsg"></p>
+      </section>
+
       <section class="card cdcard">
         <h2 class="cardtitle">Countdown</h2>
         <div class="cdrow">
@@ -120,6 +163,9 @@
       <div class="datarow">
         <button class="linkbtn" id="notifyBtn" type="button"
                 aria-pressed="false">Remind me before events</button>
+        <!-- Opens whatever mail client is already signed in. Not a send:
+             this file has no network access at all under its own CSP. -->
+        <a class="linkbtn" id="emailBtn" href="#" role="button" hidden>Email me the next 30 min</a>
       </div>
       <p class="hint" id="notifyMsg"></p>
 

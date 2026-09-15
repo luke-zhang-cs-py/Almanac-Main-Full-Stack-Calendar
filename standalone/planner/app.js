@@ -340,8 +340,47 @@
   var view = { y: 2026, m: 8 };
   var selected = null;
   var editingId = null;   // id of the event currently loaded into the form
-  var PALETTE = ["cyan","blue","violet","green","amber","orange","pink","red","slate"];
-  var formColor = "cyan";  // colour the form will apply on Add / Save
+  /* Ordered so neighbours in the list are far apart in hue -- cyan, amber,
+     violet -- rather than cyan, blue, violet, which walks around the wheel
+     and makes two consecutive picks look like the same colour. `autoColor`
+     steps through this order, so events added one after another are visibly
+     different rather than merely unequal. */
+  var PALETTE = ["cyan","amber","violet","green","pink","blue","orange","slate","red"];
+
+  var formColor = PALETTE[0];   // colour the form will apply on Add / Save
+  var colorChosen = false;      // did the *user* pick it, or did we?
+
+  /* The colour to offer for a new event on `date`.
+
+     Assigned rather than left on a fixed default: every new event used to
+     arrive cyan, so a day filled in quickly came out one colour and the
+     strips in the month grid stopped telling anything apart. The rule is
+     the first palette colour that day is not already using -- so a new
+     event differs from every event beside it, not only from the last one --
+     and once a day has used all nine it steps past whatever the most recent
+     event took, which is the best answer available when there is no unused
+     colour left.
+
+     Only ever a default. The swatches still set it, and a colour the user
+     picked is left alone until the next new event. */
+  function autoColor(date){
+    var taken = {};
+    (events[date] || []).forEach(function(e){ if (e.color) taken[e.color] = true; });
+
+    for (var i = 0; i < PALETTE.length; i++){
+      if (!taken[PALETTE[i]]) return PALETTE[i];
+    }
+
+    var list = events[date] || [];
+    var last = list.length ? list[list.length - 1].color : null;
+    var at = PALETTE.indexOf(last);
+    return PALETTE[(at + 1) % PALETTE.length];
+  }
+
+  function suggestColor(){
+    if (colorChosen) return;
+    setFormColor(autoColor(selected), false);
+  }
 
   function dayEvents(date){
     var list = events[date] || [];
@@ -521,7 +560,15 @@
              ' aria-pressed="' + (c === formColor) + '" aria-label="' + c + '" title="' + c + '"></button>';
     }).join("");
   }
-  function setFormColor(c){ formColor = c; renderSwatches(); }
+  /* `byUser` tells the auto-assignment to stop interfering. A colour
+     somebody clicked has to survive them then typing a title, changing the
+     time, or the day re-rendering underneath them -- all of which come back
+     through here. */
+  function setFormColor(c, byUser){
+    formColor = c;
+    if (byUser) colorChosen = true;
+    renderSwatches();
+  }
 
   /* ---------------- expanded day view ---------------- */
   function renderHours(){
@@ -621,7 +668,9 @@
     $("evTz").value    = match.tz || "";
     $("evType").value  = match.type;
     $("evTitle").value = match.title;
-    setFormColor(match.color || "cyan");
+    // The event's own colour, and counted as chosen: editing must not
+    // quietly repaint something that already has one.
+    setFormColor(match.color || autoColor(selected), true);
     $("evSubmit").textContent = "Save";
     $("evCancel").hidden = false;
     renderEvents();
@@ -731,7 +780,7 @@
 
   $("evColors").addEventListener("click", function(e){
     var c = e.target.getAttribute && e.target.getAttribute("data-color");
-    if (c) setFormColor(c);
+    if (c) setFormColor(c, true);   // true: the person picked this one
   });
 
   $("dvClose").addEventListener("click", function(){
@@ -931,6 +980,14 @@
       app: "september-planner",
       version: 1,
       exportedAt: new Date().toISOString(),
+      // Carried so Almanac addresses its reminders and prices an offering
+      // without anybody retyping either, and so the lead time travels with
+      // them rather than being set twice and drifting apart. Both are null
+      // until you fill the Setup card in; nothing is invented here.
+      reminderEmail: settings.email || null,
+      reminderLeadMinutes: LEAD_MINUTES,
+      ratePerHour: settings.price === null ? null
+                 : { amount: settings.price, currency: settings.currency },
       events: events, dayTodos: dayTodos, todos: todos
     };
     try{
@@ -1172,7 +1229,178 @@
     if (now !== todayISO){ todayISO = now; renderAll(); }
   }, 60000);
 
+  /* ================= settings: the two things this file cannot know =======
+
+     An email address and a rate are the owner's, so they are not in the
+     repository and not in the sample seed. The file arrives blank and asks,
+     keeps the answers in this browser's localStorage, and puts them in an
+     export only when you make one.
+
+     The email is never sent anywhere by this page. There is no fetch and no
+     form action, and the built file's Content-Security-Policy is
+     `default-src 'none'` with `form-action 'none'`, so a request could not
+     leave even if something here tried to make one. It addresses a mailto:,
+     which hands the message to a mail client that is already signed in.
+  */
+  var SETTINGS_KEY = "sept-planner.settings.v1";
+  var settings = load(SETTINGS_KEY, { email: "", price: null, currency: "GBP" });
+
+  var CURRENCY_SIGN = { GBP: "\u00a3", CAD: "$", USD: "$", EUR: "\u20ac" };
+  var MAX_RATE = 100000;
+
+  /* Deliberately loose. The strict-looking address patterns reject real
+     addresses -- plus-tags, new TLDs, apostrophes -- and the only thing
+     riding on this is whether a mailto: is worth offering. Anything with a
+     local part, an @ and a dotted domain passes; the mail client is the
+     real judge. */
+  function looksLikeEmail(value){
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  }
+
+  function money(amount, currency){
+    var sign = CURRENCY_SIGN[currency] || "";
+    return sign + Number(amount).toFixed(2);
+  }
+
+  function setupNote(text){ $("setupMsg").textContent = text; }
+
+  function renderSetup(){
+    var card = $("setupCard");
+    var haveEmail = !!settings.email;
+    var havePrice = settings.price !== null;
+
+    $("setEmail").value    = settings.email || "";
+    $("setPrice").value    = havePrice ? settings.price : "";
+    $("setCurrency").value = settings.currency || "GBP";
+
+    // Outlined until both are set, so a blank planner says what it needs
+    // rather than quietly doing nothing when reminders are switched on.
+    card.classList.toggle("needed", !(haveEmail && havePrice));
+    $("setupState").textContent =
+      haveEmail && havePrice ? "" : "needs setting";
+
+    var email = $("emailBtn");
+    if (email) email.hidden = !haveEmail;
+
+    if (!haveEmail && !havePrice) {
+      setupNote("Add an address for reminders and the rate you charge. "
+              + "Both stay in this browser.");
+    } else if (!haveEmail) {
+      setupNote("No address yet, so there is nothing to email.");
+    } else if (!havePrice) {
+      setupNote("Reminders go to " + settings.email + ". No rate set yet.");
+    } else {
+      setupNote("Reminders go to " + settings.email + " "
+              + LEAD_MINUTES + " minutes ahead. Rate "
+              + money(settings.price, settings.currency) + " per hour, "
+              + "carried into an export for Almanac.");
+    }
+  }
+
+  $("setupForm").addEventListener("submit", function(ev){
+    ev.preventDefault();
+    var email = ($("setEmail").value || "").trim();
+    var raw   = ($("setPrice").value || "").trim();
+
+    // Both optional on their own -- somebody may want reminders and no rate
+    // -- but a value that was typed and is wrong is an error, not a blank.
+    if (email && !looksLikeEmail(email)) {
+      setupNote("That does not look like an email address.");
+      return;
+    }
+
+    var price = null;
+    if (raw !== "") {
+      price = Number(raw);
+      if (!isFinite(price) || price < 0) {
+        setupNote("A rate has to be a number, and not a negative one.");
+        return;
+      }
+      if (price > MAX_RATE) {
+        setupNote("That rate looks like a typo. Cap is "
+                + MAX_RATE.toLocaleString() + ".");
+        return;
+      }
+      // Stored to the penny: a rate carried as 19.999 prints as 20.00 and
+      // then exports as something a person never typed.
+      price = Math.round(price * 100) / 100;
+    }
+
+    settings.email    = email;
+    settings.price    = price;
+    settings.currency = $("setCurrency").value || "GBP";
+    save(SETTINGS_KEY, settings);
+    renderSetup();
+    refreshEmailLink();
+  });
+
+  /* Everything starting inside the lead window, for the email.
+
+     Deliberately not `dueSoon`: that skips anything already announced,
+     because announcing twice is the bug it exists to prevent. An email you
+     asked for is a different question -- what is coming up, not what has
+     yet to be mentioned -- so it is asked separately rather than by
+     loosening the notification rule. */
+  function startingWithin(minutes){
+    var now = Date.now(), out = [];
+    [currentISO(), addDays(currentISO(), 1)].forEach(function(date){
+      (events[date] || []).forEach(function(e){
+        if (e.done) return;
+        var at = startsAt(date, e);
+        if (at === null) return;
+        var away = at - now;
+        if (away >= 0 && away <= minutes * 60000) {
+          out.push({ date: date, e: e, away: away });
+        }
+      });
+    });
+    return out.sort(function(a, b){ return a.away - b.away; });
+  }
+
+  function buildReminderMail(){
+    var soon = startingWithin(LEAD_MINUTES);
+    var subject, lines;
+
+    if (!soon.length) {
+      subject = "Planner: nothing in the next " + LEAD_MINUTES + " minutes";
+      lines = ["No events start within " + LEAD_MINUTES + " minutes."];
+    } else {
+      subject = "Planner: " + soon.length + " event(s) within "
+              + LEAD_MINUTES + " min \u2014 " + soon[0].e.title;
+      lines = soon.map(function(item){
+        return "- " + fmtSpan(item.e) + "  " + item.e.title
+             + "  (in " + Math.round(item.away / 60000) + " min)";
+      });
+    }
+
+    lines.push("");
+    lines.push("Sent from the planner on this machine.");
+    return "mailto:" + encodeURIComponent(settings.email)
+         + "?subject=" + encodeURIComponent(subject)
+         + "&body=" + encodeURIComponent(lines.join("\n"));
+  }
+
+  /* Kept current on the anchor rather than hijacked on click.
+
+     Assigning `window.location.href` from a click handler works in a
+     browser and is worse in every other way: the link has no real
+     destination until it is clicked, so it cannot be middle-clicked,
+     copied, or read by anything inspecting the page -- and driving it from
+     a headless browser hangs on a mailto: with no handler. A plain href the
+     browser handles natively has none of those problems, refreshed on the
+     same tick as the reminders so "the next 30 minutes" means from now. */
+  function refreshEmailLink(){
+    var a = $("emailBtn");
+    if (!a) return;
+    if (!settings.email) { a.hidden = true; return; }
+    a.hidden = false;
+    a.setAttribute("href", buildReminderMail());
+  }
+
   renderSwatches();
+  renderSetup();
+  refreshEmailLink();
+  suggestColor();        // the first new event gets an assigned colour too
   renderAll();
   renderTodos();
 })();

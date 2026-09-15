@@ -376,29 +376,29 @@ var TESTS = [
   { file: 'test_appointments_api.py',     n: 36, of: 'booking, cancelling, completing, and who may do which' },
   { file: 'test_email_render.py',         n: 33, of: 'that the text and HTML halves cannot drift apart' },
   { file: 'test_coffee_chats.py',         n: 32, of: 'the invite lifecycle end to end' },
+  { file: 'test_planner.py',              n: 31, of: 'the standalone planner, and that no seed of anyone’s is committed with it' },
   { file: 'test_pounds.py',               n: 31, of: 'the cross rate and the markup, against the wallet fixture' },
   { file: 'test_notifications.py',        n: 29, of: 'what is said, on which occasion' },
   { file: 'test_hostile_input.py',        n: 27, of: 'what a provider can do to their own calendar' },
   { file: 'test_schedule.py',             n: 25, of: 'the imported timetable, and the reminder the planner cannot send' },
-  { file: 'test_planner.py',              n: 24, of: 'the standalone planner, and that no seed of anyone’s is committed with it' },
   { file: 'test_accounts_api.py',         n: 23, of: 'registration, login, and the role nobody may self-assign' },
   { file: 'test_email_admin_api.py',      n: 21, of: 'the delivery log and the manual scan' },
   { file: 'test_refusals.py',             n: 20, of: 'what every endpoint says when it has to say no' },
   { file: 'test_offerings.py',            n: 19, of: 'the catalogue, and money as integer minor units' },
   { file: 'test_routes.py',               n: 19, of: 'the HTTP surface' },
+  { file: 'test_calendar_logic.py',       n: 18, of: 'the slot engine' },
   { file: 'test_coffee_notifications.py', n: 17, of: 'invite, nudge, booked and declined mail' },
   { file: 'test_config_and_mailer.py',    n: 17, of: 'the key check, and a mail server that refuses' },
   { file: 'test_last_resorts.py',         n: 17, of: 'the arms that run only after something else went wrong' },
   { file: 'test_api_naming.py',           n: 13, of: 'that the whole API speaks one language on the wire' },
   { file: 'test_coffee_edges.py',         n: 13, of: 'expired links, lost races, and payloads nobody meant to send' },
-  { file: 'test_calendar_logic.py',       n: 12, of: 'the slot engine' },
   { file: 'test_timestamps.py',           n: 12, of: 'that every timestamp is written the same way' },
   { file: 'test_published_figures.py',    n: 11, of: 'the numbers on this page, against a fresh measurement' },
   { file: 'test_delivery.py',             n: 10, of: 'the SMTP conversation, and the sweep that drives it' },
   { file: 'test_scheduler.py',            n: 10, of: 'the background sweep' }
 ];
 
-var TEST_LINES = 5606;
+var TEST_LINES = 5794;
 
 /* Which interpreter produced the statement counts above. It matters: coverage
  * counts a `with` block or a multi-line call differently between versions, so
