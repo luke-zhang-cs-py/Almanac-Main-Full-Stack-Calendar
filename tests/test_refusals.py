@@ -13,8 +13,6 @@ to translate a real domain error, not a mocked one.
 
 import datetime as dt
 
-import pytest
-
 
 # ----------------------------------------------------------- the catalogue
 
