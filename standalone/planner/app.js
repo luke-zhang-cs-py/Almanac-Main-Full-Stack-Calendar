@@ -1159,8 +1159,14 @@
   }
 
   function checkReminders(){
-    if (!notifySettings.on || !canNotify()) return;
-    if (Notification.permission !== "granted") return;
+    // The same predicate, not a third hand-rolled copy of it. This went on
+    // deriving the condition across two statements after `remindersOn()`
+    // was introduced to stop the button and its handler disagreeing -- and
+    // it is the copy that decides whether a reminder actually fires, so it
+    // was the worst one to leave duplicated. (`remindersOn` is declared
+    // below; both are hoisted declarations in this scope and the call
+    // happens at runtime, so the order is not a problem.)
+    if (!remindersOn()) return;
     dueSoon(Date.now()).forEach(announce);
   }
 
