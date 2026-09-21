@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Almanac — appointment platform, overview</title>
+<meta name="description" content="A single-role-simpler precursor to Almanac's booking platform: JWT auth, a free-slot engine, automatic email that sends exactly once, and coffee chats that need no account.">
+<meta property="og:title" content="Almanac — appointment platform (branch)">
+<meta property="og:description" content="303 tests, 93% coverage, 34 JWT-guarded endpoints across 3 roles. Measured, not estimated.">
+<meta property="og:type" content="website">
+<style>
+.viz-root {
+  color-scheme: light;
+  --plane:     #ece6d6;
+  --surface:   #fffdf7;
+  --ink:       #12161d;
+  --ink-2:     #3c4453;
+  --ink-muted: #8d7a52;
+  --grid:      #ece6d6;
+  --ring:      #ded5bf;
+  --code-bg:   #f6f1e4;
+  --series:    #2a78d6;
+  --track:     #ece6d6;
+  --good:      #0ca30c;
+  --warning:   #fab219;
+  --critical:  #d03b3b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) .viz-root {
+    color-scheme: dark;
+    --plane: #0d0d0d; --surface: #1a1a19;
+    --ink: #ffffff; --ink-2: #c3c2b7; --ink-muted: #898781;
+    --grid: #2c2c2a; --ring: #383835; --code-bg: #21201e;
+    --series: #3987e5; --track: #2c2c2a;
+  }
+}
+:root[data-theme="dark"] .viz-root {
+  color-scheme: dark;
+  --plane: #0d0d0d; --surface: #1a1a19;
+  --ink: #ffffff; --ink-2: #c3c2b7; --ink-muted: #898781;
+  --grid: #2c2c2a; --ring: #383835; --code-bg: #21201e;
+  --series: #3987e5; --track: #2c2c2a;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+.viz-root {
+  --text: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 34px 24px 44px;
+  font: 15px/1.55 var(--text);
+  background: var(--plane); color: var(--ink);
+  min-height: 100vh;
+}
+main { max-width: 980px; margin: 0 auto; }
+
+.crumb {
+  margin: 0 0 6px; font: 400 12px var(--mono); color: var(--ink-muted);
+  letter-spacing: .02em;
+}
+h1 { font-size: 23px; margin: 0 0 5px; letter-spacing: -0.2px; }
+.lede { color: var(--ink-2); margin: 0; font-size: 15px; max-width: 68ch; }
+.head { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; flex-wrap: wrap; }
+.controls { display: flex; gap: 8px; flex-wrap: wrap; }
+button, .btn {
+  font: 400 13px var(--text); cursor: pointer; text-decoration: none;
+  display: inline-block;
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--ring); border-radius: 8px; padding: 7px 12px;
+}
+button:hover, .btn:hover { border-color: var(--ink-muted); }
+button[aria-pressed="true"] { border-color: var(--series); color: var(--series); }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(156px, 1fr)); gap: 12px; margin: 26px 0 10px; }
+.tile { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px; padding: 14px 16px; }
+.tile .k { display: block; color: var(--ink-2); font-size: 11px; text-transform: uppercase; letter-spacing: .07em; }
+.tile .v { display: block; margin-top: 3px; font: 600 27px/1.12 var(--text); font-variant-numeric: tabular-nums; }
+.tile .n { display: block; margin-top: 2px; color: var(--ink-muted); font-size: 12px; }
+
+.note { color: var(--ink-muted); font-size: 13px; max-width: 80ch; margin: 12px 0 0; }
+
+.panel { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px; padding: 17px 19px; margin-top: 22px; }
+.panel h2 { margin: 0 0 2px; font-size: 15px; }
+.panel h3 { margin: 20px 0 6px; font-size: 13px; color: var(--ink-2); }
+.panel .sub { margin: 0 0 14px; color: var(--ink-2); font-size: 13px; max-width: 76ch; }
+.panel p { font-size: 14px; color: var(--ink-2); max-width: 76ch; }
+.split { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 22px; }
+
+.bars { display: grid; gap: 9px; }
+.bar { display: grid; grid-template-columns: 210px 1fr 92px; gap: 12px; align-items: center; }
+.bar .lab { font: 400 12.5px var(--mono); color: var(--ink-2); }
+.bar .rail { position: relative; height: 12px; background: var(--track); border-radius: 3px; }
+.bar .fill { position: absolute; inset: 0 auto 0 0; background: var(--series); border-radius: 0 4px 4px 0; }
+.bar .val { text-align: right; font: 500 12px var(--mono); font-variant-numeric: tabular-nums; color: var(--ink); }
+.bar:hover .rail { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+table { width: 100%; border-collapse: collapse; }
+caption { text-align: left; color: var(--ink-2); font-size: 13px; padding-bottom: 10px; }
+th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid var(--grid); font-size: 13px; vertical-align: top; }
+th { color: var(--ink-2); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+td.num, th.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+td.mono { font-family: var(--mono); font-size: 12px; }
+tr.total td { border-bottom: none; font-weight: 600; }
+[hidden] { display: none !important; }
+
+code { font-family: var(--mono); font-size: 12.5px; background: var(--code-bg); border: 1px solid var(--grid); border-radius: 4px; padding: 1px 5px; }
+pre {
+  background: var(--code-bg); border: 1px solid var(--grid); border-radius: 8px;
+  padding: 13px 15px; overflow-x: auto;
+  font: 12.5px/1.7 var(--mono); color: var(--ink); margin: 12px 0 0;
+}
+
+.flow { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
+.flow li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; font-size: 13.5px; color: var(--ink-2); }
+.step {
+  font: 500 11px var(--mono); color: var(--series);
+  border: 1px solid var(--ring); border-radius: 5px;
+  text-align: center; padding: 1px 0; height: 20px;
+}
+
+.flag { display: inline-flex; align-items: center; gap: 5px; font: 500 11.5px var(--mono); white-space: nowrap; }
+.flag .g { font-size: 12px; }
+.flag.good { color: var(--good); }
+.flag.warn { color: var(--warning); }
+.flag.crit { color: var(--critical); }
+
+dl.kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 12px 0 0; font-size: 13px; }
+dl.kv dt { color: var(--ink-2); font-family: var(--mono); font-size: 12px; }
+dl.kv dd { margin: 0; }
+
+footer { margin-top: 28px; color: var(--ink-muted); font-size: 12.5px; max-width: 86ch; }
+footer a { color: inherit; }
+</style>
+</head>
+
+<body class="viz-root" data-palette="#2a78d6">
+<main>
+
+<div class="head">
+  <div>
+    <p class="crumb">Appointment-Platform-Almanac-Branch &middot; port 5000</p>
+    <h1>The single-role branch: appointment booking, before Almanac grew a planner and a wallet</h1>
+    <p class="lede">
+      JWT auth over three roles — client, provider, admin — a free-slot
+      engine that turns recurring hours into bookable times without ever
+      double-booking, automatic email that fires exactly once, and coffee
+      chats: an invite that produces a booking without the guest ever
+      making an account. This branch is where that pattern was built and
+      audited twice before <a href="https://luke-zhang-cs-py.github.io/Almanac-Main-Full-Stack-Calendar/">Almanac-Main</a>
+      added the planner import and multi-currency wallet on top of it.
+    </p>
+  </div>
+  <div class="controls">
+    <button id="themeBtn" type="button">Theme</button>
+    <button id="tableBtn" type="button" aria-pressed="false">Table view</button>
+    <a class="btn" href="https://github.com/luke-zhang-cs-py/Appointment-Platform-Almanac-Branch">Repository</a>
+    <a class="btn" id="localBtn" href="http://127.0.0.1:5000/"
+       title="Only works on a machine that is running the app">Open app (local)</a>
+    <a class="btn" href="architecture.html">Architecture</a>
+  </div>
+</div>
+
+<section class="tiles" id="tiles" aria-label="Headline figures"></section>
+<p class="note" id="tilesNote"></p>
+
+<section class="panel">
+  <h2>What a free slot is, and what it has to survive</h2>
+  <p class="sub">
+    <code>calendar_logic.py</code> turns a provider's recurring weekly hours,
+    their one-off blocked dates and their existing bookings into the list of
+    times a client may actually pick, for any date.
+  </p>
+  <ul class="flow" id="slotList"></ul>
+  <p id="raceNote"></p>
+</section>
+
+<section class="panel">
+  <h2>Automatic email, sent exactly once</h2>
+  <p class="sub">
+    Welcome, booking confirmation, cancellation, completion, and a 24-hour
+    reminder — none of them need a button pressed.
+  </p>
+  <table>
+    <caption>Delivery happens on a background thread, so a slow mail server
+      never slows down a booking.</caption>
+    <thead>
+      <tr><th>When</th><th>Who gets mailed</th></tr>
+    </thead>
+    <tbody id="mailBody"></tbody>
+  </table>
+  <div class="split">
+    <div>
+      <h3>Nobody is mailed twice</h3>
+      <p>
+        A unique index on <code>email_log (appointment_id, kind,
+        recipient)</code> is the source of truth rather than a flag
+        somebody remembers to set — one of the bugs the second audit pass
+        found was exactly this: a host receiving two emails for one
+        booking, from two code paths that both thought they were the only
+        sender.
+      </p>
+    </div>
+    <div>
+      <h3>Nothing blocks, and nothing is lost</h3>
+      <p>
+        <code>mailer.send()</code> writes a row and hands the message to a
+        worker thread; the booking request returns immediately. With no
+        <code>SMTP_HOST</code> set, the message prints to the terminal
+        instead of sending — which is also how a Unicode en dash in the
+        details block once raised <code>UnicodeEncodeError</code> under a
+        narrow console and got logged as a failed send for a message that
+        was never actually attempted.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Coffee chats: an email that produces a booking</h2>
+  <p class="sub">
+    The reverse of the usual direction. You send someone an invite, they
+    click the link, they see your real availability, they pick a time —
+    and <strong>they never make an account</strong>.
+  </p>
+  <ul class="flow" id="coffeeList"></ul>
+  <p id="coffeeNote"></p>
+</section>
+
+<section class="panel" id="modulePanel">
+  <h2>Every module, by size</h2>
+  <p class="sub" id="moduleSub"></p>
+  <div id="moduleBars" class="bars"></div>
+</section>
+
+<section class="panel" id="testPanel">
+  <h2>Where the tests are</h2>
+  <p class="sub" id="testSub"></p>
+  <div id="testBars" class="bars"></div>
+</section>
+
+<section class="panel" id="tablePanel" hidden>
+  <table>
+    <caption>Every module with its size, statements, coverage and what it is
+      for. The same data as the two charts above.</caption>
+    <thead>
+      <tr><th>Module</th><th class="num">Lines</th><th class="num">Stmts</th>
+          <th class="num">Covered</th><th>What it does</th></tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</section>
+
+<section class="panel">
+  <h2>Bugs, found by two audit passes</h2>
+  <p class="sub">
+    The first pass fixed what was cheap and listed what was not; the second
+    went back and did the listed part — the long parameter lists, a
+    513-line module doing three jobs, a cross-module import of another
+    module's underscore-prefixed helpers, and the signing key — and these
+    five are what going back to refactor it, carefully, with 249 tests
+    already green, turned up on the way down.
+  </p>
+  <table>
+    <thead>
+      <tr><th>What was wrong</th><th>What found it</th><th class="num">State</th></tr>
+    </thead>
+    <tbody id="bugBody"></tbody>
+  </table>
+  <p class="note" id="bugNote"></p>
+</section>
+
+<section class="panel">
+  <h2>The key that signs every session</h2>
+  <p class="sub">
+    The development fallback for <code>SECRET_KEY</code> is committed, so it
+    is public. A deployment that kept it is one where anybody could mint a
+    valid admin token.
+  </p>
+  <pre id="keySample"></pre>
+  <p id="keyNote"></p>
+  <h3>What is checked, and what is still missing</h3>
+  <div class="split">
+    <div>
+      <ul class="flow" id="secureList"></ul>
+    </div>
+    <div>
+      <ul class="flow" id="missingList"></ul>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p id="footNote"></p>
+  <p>
+    <a href="https://github.com/luke-zhang-cs-py/Appointment-Platform-Almanac-Branch">Repository</a>
+    &middot; <a href="architecture.html">Every component &rarr;</a>
+    &middot; MIT &middot; loopback by default, on port 5000
+  </p>
+</footer>
+
+</main>
+
+<script>
+'use strict';
+
+/* Every number on this page was measured directly against this checkout,
+ * not copied from CODE_AUDIT.md, which turned out to be stale: it reports
+ * 249 tests and this run collected 303. `python -m pytest tests/ --cov=.
+ * --cov-report=term-missing` for the statement/coverage figures,
+ * `python -m pytest tests/ --collect-only -q` for the exact per-file test
+ * counts, `wc -l` for line counts, and the endpoint count by actually
+ * building the Flask app and walking `url_map.iter_rules()` rather than
+ * grepping for route decorators. Measured 21 September 2026. */
+
+var MODULES = [
+  { name: 'coffee_chats.py',               lines: 518, stmts: 190, missed: 19, does: 'the invite lifecycle: tokens, expiry, nudges, guest booking' },
+  { name: 'database.py',                   lines: 420, stmts:  99, missed: 18, does: 'one interface over SQLite and Postgres' },
+  { name: 'notifications.py',              lines: 320, stmts:  87, missed:  6, does: 'what Almanac says, and on what occasion' },
+  { name: 'mailer.py',                     lines: 288, stmts: 128, missed: 19, does: 'transport: SMTP, the background queue, the delivery log' },
+  { name: 'offerings.py',                  lines: 250, stmts:  89, missed:  0, does: 'the priced catalogue; money as integer minor units' },
+  { name: 'coffee_notifications.py',       lines: 232, stmts:  80, missed:  9, does: 'invite, nudge, booked and declined mail' },
+  { name: 'email_render.py',               lines: 206, stmts:  63, missed:  0, does: 'how a message is laid out — text and HTML from one description' },
+  { name: 'calendar_logic.py',             lines: 197, stmts:  86, missed:  1, does: 'the free-slot engine' },
+  { name: 'routes/coffee_routes.py',       lines: 200, stmts:  97, missed:  8, does: 'invites for the host, booking for the guest' },
+  { name: 'routes/availability_routes.py', lines: 182, stmts: 103, missed:  1, does: 'provider hours and blocked dates; the public slot lookup' },
+  { name: 'config.py',                     lines: 117, stmts:  43, missed:  0, does: 'every setting, from the environment — and the key check' },
+  { name: 'routes/appointment_routes.py',  lines: 146, stmts:  86, missed:  7, does: 'book, list, cancel, complete' },
+  { name: 'routes/offering_routes.py',     lines: 138, stmts:  71, missed:  8, does: 'catalogue CRUD for the owner, browse for everyone' },
+  { name: 'routes/auth_routes.py',         lines:  97, stmts:  56, missed:  0, does: 'register, login, me' },
+  { name: 'scheduler.py',                  lines:  93, stmts:  42, missed:  3, does: 'the one background timer: reminders and coffee nudges' },
+  { name: 'auth.py',                       lines:  84, stmts:  48, missed:  1, does: 'JWTs, and the two decorators that guard every route' },
+  { name: 'app.py',                        lines:  77, stmts:  45, missed:  4, does: 'the factory and the blueprint registration' },
+  { name: 'routes/email_routes.py',        lines:  73, stmts:  43, missed:  0, does: 'the admin delivery log, a test send, a manual scan' },
+  { name: 'routes/user_routes.py',         lines:  62, stmts:  32, missed:  1, does: 'providers, and the admin user list' },
+  { name: 'routes/__init__.py',            lines:  40, stmts:   9, missed:  0, does: 'the blueprint list' }
+];
+
+var OMITTED = [
+  { name: 'login_page.py', lines: 405, why: 'a deliberately standalone demo server with its own database' },
+  { name: 'seed_luke.py',  lines: 278, why: 'seeds a provider with hours and a catalogue' },
+  { name: 'seed_data.py',  lines:  32, why: 'seeds the demo accounts' }
+];
+
+var TESTS = [
+  { file: 'test_appointments_api.py',  n: 36, of: 'booking, cancelling, completing, and who may do which' },
+  { file: 'test_coffee_chats.py',      n: 32, of: 'the invite lifecycle end to end' },
+  { file: 'test_accounts_api.py',      n: 23, of: 'registration, login, and the role nobody may self-assign' },
+  { file: 'test_email_render.py',      n: 28, of: 'that the text and HTML halves cannot drift apart' },
+  { file: 'test_hostile_input.py',     n: 27, of: 'what a provider can do to their own calendar' },
+  { file: 'test_notifications.py',     n: 20, of: 'what is said, on which occasion' },
+  { file: 'test_email_admin_api.py',   n: 19, of: 'the delivery log and the manual scan' },
+  { file: 'test_offerings.py',         n: 19, of: 'the catalogue, and money as integer minor units' },
+  { file: 'test_routes.py',            n: 19, of: 'the HTTP surface' },
+  { file: 'test_coffee_notifications.py', n: 17, of: 'invite, nudge, booked and declined mail' },
+  { file: 'test_config_and_mailer.py', n: 17, of: 'the key check, and a mail server that refuses' },
+  { file: 'test_api_naming.py',        n: 13, of: 'that the whole API speaks one language on the wire' },
+  { file: 'test_calendar_logic.py',    n: 12, of: 'the slot engine' },
+  { file: 'test_timestamps.py',        n: 12, of: 'that every timestamp is written the same way' },
+  { file: 'test_scheduler.py',         n:  9, of: 'the background sweep' }
+];
+
+var TEST_LINES = 2621;
+var MEASURED_WITH = 'Python 3.14';
+var ENDPOINTS = 34;
+var ROLES = 3;
+
+var SLOTS = [
+  '<strong>Recurring weekly hours</strong> — a provider says "Tuesdays, 09:00 to 17:00", once.',
+  '<strong>Minus one-off blocked dates</strong> — a dentist appointment on one Tuesday, without touching the weekly rule.',
+  '<strong>Minus what is already booked</strong>, including bookings longer than a single slot — <code>is_slot_free</code> rejecting every multi-slot booking was one of the logical bugs the first audit pass found.',
+  '<strong>Minus times that have already passed</strong>, when the date asked about is today.',
+  '<strong>Cut into steps of the provider’s own slot length</strong>.'
+];
+
+var MAILS = [
+  ['An account is created', 'the new user'],
+  ['A client books a slot', 'client <b>and</b> provider'],
+  ['An appointment is cancelled', 'client <b>and</b> provider'],
+  ['A provider marks one done', 'the client'],
+  ['A set number of hours before the start', 'client <b>and</b> provider']
+];
+
+var COFFEE = [
+  '<strong>The host sends an invite</strong> — optionally naming one priced session, so the length and topic come from the catalogue rather than being retyped.',
+  '<strong>The guest opens the link</strong> and sees real availability. No account, because a coffee chat is usually first contact and asking a founder to register loses most of them.',
+  '<strong>They pick a time</strong>, and it becomes an ordinary appointment with the usual confirmation and reminder.',
+  '<strong>If they do not</strong>, a follow-up goes out after three days — capped at two, because a third is pestering. Invites expire on their own.'
+];
+
+var BUGS = [
+  ['<code>login_page.py</code> could not log anybody in',
+   'It built a JWT with an integer <code>sub</code>. RFC 7519 says that is a string and PyJWT &ge; 2.10 enforces it on decode, so the standalone server issued tokens it then rejected. <code>auth.py</code> had the fix and a comment explaining it; the copy never got it.',
+   'Found in the first pass, repeated here because it explains the rest', 'fixed'],
+  ['<code>datetime.utcnow()</code> in two files',
+   'Deprecated and scheduled for removal, and it returns a naive datetime that only happens to mean UTC. Now <code>datetime.now(timezone.utc)</code>; PyJWT converts aware datetimes itself, so nothing changes on the wire.',
+   'A library moved and this code had not', 'fixed'],
+  ['A console that cannot draw a dash marked every email as failed',
+   'With no <code>SMTP_HOST</code>, <code>mailer</code> prints the message instead of sending it. The details block puts an en dash between a start and end time; under a bare C locale printing one raises <code>UnicodeEncodeError</code>, and the email got recorded as <b>failed</b> for a send that was only ever a print.',
+   '<code>test_the_failure_is_real_without_the_guard</code>', 'fixed'],
+  ['Users looked up by a string id',
+   'Once <code>sub</code> became a string, <code>WHERE id = ?</code> was being handed <code>&#39;3&#39;</code> against an INTEGER column. SQLite coerces it and matches, so it worked by luck.',
+   'Reading the fix for the bug above and checking who else needed it', 'fixed'],
+  ['Two dead locals in <code>public_offerings</code>',
+   'Left over when <code>_price_range</code> was extracted in the first pass.',
+   'flake8 F841, the moment the file was touched again', 'fixed']
+];
+
+var SECURE = [
+  'Passwords hashed with Werkzeug, never stored or logged.',
+  'JWTs are HS256 with an expiry, and the key must be at least 32 bytes.',
+  '<code>@token_required</code> and <code>@roles_required</code> on every sensitive route.',
+  'SQL parameterised throughout.',
+  'A test asserts nobody can register themselves as an admin.',
+  'A leaked invite link costs one coffee chat, not read access to a calendar.'
+];
+
+var MISSING = [
+  'Rate limiting on the auth endpoints.',
+  'Refresh tokens — the current ones simply expire.',
+  'Email verification.',
+  'HTTPS enforcement, which is the host’s job but is not enforced here.',
+  'A migration tool. The schema is create-if-not-exists.',
+  'An unsubscribe link and per-user notification preferences.'
+];
+
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+  });
+}
+function el(id) { return document.getElementById(id); }
+function covered(m) { return m.stmts - m.missed; }
+function coverage(m) { return Math.round(100 * covered(m) / m.stmts); }
+function sum(list, field) {
+  return list.reduce(function (n, item) { return n + field(item); }, 0);
+}
+
+var STMTS = sum(MODULES, function (m) { return m.stmts; });
+var COVERED = sum(MODULES, covered);
+var LINES = sum(MODULES, function (m) { return m.lines; });
+var TEST_COUNT = sum(TESTS, function (t) { return t.n; });
+
+function drawTiles() {
+  var tiles = [
+    ['Tests', TEST_COUNT.toLocaleString(),
+     TESTS.length + ' files, ' + TEST_LINES.toLocaleString() + ' lines'],
+    ['Coverage', Math.round(100 * COVERED / STMTS) + '%',
+     COVERED.toLocaleString() + ' of ' + STMTS.toLocaleString() + ' statements'],
+    ['Endpoints', ENDPOINTS, 'across ' + ROLES + ' roles, JWT-guarded'],
+    ['Modules', MODULES.length, LINES.toLocaleString() + ' lines of source'],
+    ['Databases', 2, 'SQLite locally, Postgres by one variable']
+  ];
+  el('tiles').innerHTML = tiles.map(function (t) {
+    return '<div class="tile"><span class="k">' + esc(t[0]) +
+      '</span><strong class="v">' + esc(t[1]) + '</strong>' +
+      '<span class="n">' + esc(t[2]) + '</span></div>';
+  }).join('');
+
+  el('tilesNote').textContent =
+    'This branch predates the planner import and the multi-currency wallet ' +
+    '— Almanac-Main adds those on top of the same auth, calendar and email ' +
+    'core measured here. CODE_AUDIT.md in the repository documents this as ' +
+    '249 tests; a fresh run against this checkout collects ' + TEST_COUNT +
+    ', because the suite kept growing after that document was written. The ' +
+    'endpoint count is read off the real routing table rather than grepped ' +
+    'for.';
+}
+
+function drawBars(id, rows, label, value, size, peak) {
+  el(id).innerHTML = rows.map(function (row) {
+    var width = (size(row) / peak * 100).toFixed(1);
+    return '<div class="bar" title="' + esc(label(row) + ' — ' + value(row)) +
+      '"><span class="lab">' + esc(label(row)) + '</span>' +
+      '<span class="rail"><span class="fill" style="width:' + width +
+      '%"></span></span>' +
+      '<span class="val">' + esc(value(row)) + '</span></div>';
+  }).join('');
+}
+
+function byStatements() {
+  return MODULES.slice().sort(function (a, b) { return b.stmts - a.stmts; });
+}
+
+function drawModules() {
+  var rows = byStatements();
+  var peak = rows[0].stmts;
+  el('moduleSub').textContent =
+    'By executable statements, largest first. The widest is ' + rows[0].name +
+    ' at ' + rows[0].stmts + ' statements: an invite that has to work for ' +
+    'somebody with no account carries more state than a booking made by ' +
+    'somebody who has one.';
+  drawBars('moduleBars', rows,
+           function (m) { return m.name; },
+           function (m) { return m.stmts + ' · ' + coverage(m) + '%'; },
+           function (m) { return m.stmts; }, peak);
+}
+
+function drawTests() {
+  var peak = Math.max.apply(null, TESTS.map(function (t) { return t.n; }));
+  var most = TESTS.reduce(function (a, b) { return b.n > a.n ? b : a; });
+  el('testSub').textContent =
+    'The heaviest file is ' + most.file + ' at ' + most.n + ' — ' + most.of +
+    '. test_hostile_input.py is worth naming on its own: every case in it ' +
+    'is something a provider could do to their own calendar through the ' +
+    'API, which is the direction more than one bug here came from.';
+  drawBars('testBars', TESTS,
+           function (t) { return t.file.replace('test_', '').replace('.py', ''); },
+           function (t) { return String(t.n); },
+           function (t) { return t.n; }, peak);
+}
+
+function drawTable() {
+  var rows = byStatements().map(function (m) {
+    return '<tr><td class="mono">' + esc(m.name) + '</td>' +
+      '<td class="num">' + m.lines + '</td>' +
+      '<td class="num">' + m.stmts + '</td>' +
+      '<td class="num">' + coverage(m) + '%</td>' +
+      '<td>' + esc(m.does) + '</td></tr>';
+  }).join('');
+  var omitted = OMITTED.map(function (o) {
+    return '<tr><td class="mono">' + esc(o.name) + '</td>' +
+      '<td class="num">' + o.lines + '</td>' +
+      '<td class="num">&mdash;</td><td class="num">omitted</td>' +
+      '<td>' + esc(o.why) + '</td></tr>';
+  }).join('');
+  el('tableBody').innerHTML = rows + omitted +
+    '<tr class="total"><td>Total, excluding the omitted scripts</td>' +
+    '<td class="num">' + LINES.toLocaleString() + '</td>' +
+    '<td class="num">' + STMTS.toLocaleString() + '</td>' +
+    '<td class="num">' + Math.round(100 * COVERED / STMTS) + '%</td>' +
+    '<td>&mdash;</td></tr>';
+}
+
+function drawBugs() {
+  el('bugBody').innerHTML = BUGS.map(function (b) {
+    return '<tr><td><b>' + b[0] + '</b><br>' + b[1] + '</td>' +
+      '<td>' + b[2] + '</td>' +
+      '<td class="num"><span class="flag good"><span class="g">✓</span>' +
+      esc(b[3]) + '</span></td></tr>';
+  }).join('');
+  el('bugNote').textContent =
+    'Two more from the bug-classes table are not detailed above: is_slot_free ' +
+    'once rejected every multi-slot booking (a logical bug, reported as ' +
+    '"someone just took that slot"), and the host once received two emails ' +
+    'for one booking (an integration bug, two code paths that both thought ' +
+    'they were the only sender). Both predate this document’s own ' +
+    'detailed write-up and are named here rather than left unmentioned.';
+}
+
+function drawSlots() {
+  el('slotList').innerHTML = SLOTS.map(function (text, index) {
+    var n = index + 1;
+    return '<li><span class="step">' + (n < 10 ? '0' + n : n) +
+      '</span><span>' + text + '</span></li>';
+  }).join('');
+
+  el('raceNote').innerHTML =
+    'Two clients who load the same page at the same moment both see the slot ' +
+    'as free, and the one that arrives second is stopped by a <b>unique ' +
+    'constraint in the database</b> rather than by a check in the handler.';
+}
+
+function drawMail() {
+  el('mailBody').innerHTML = MAILS.map(function (m) {
+    return '<tr><td>' + esc(m[0]) + '</td><td>' + m[1] + '</td></tr>';
+  }).join('');
+}
+
+function drawCoffee() {
+  el('coffeeList').innerHTML = COFFEE.map(function (text, index) {
+    var n = index + 1;
+    return '<li><span class="step">' + (n < 10 ? '0' + n : n) +
+      '</span><span>' + text + '</span></li>';
+  }).join('');
+  el('coffeeNote').innerHTML =
+    'A host types the guest’s name and it lands in an HTML email, so ' +
+    '<code>email_render.escape</code> is the only thing between that and a ' +
+    'mail client — <code>test_guest_text_reaches_the_html_escaped</code> ' +
+    'covers exactly that.';
+}
+
+function drawSecurity() {
+  el('keySample').textContent = [
+    "SECRET_KEY is still the development placeholder committed in config.py.",
+    "It signs every session token and it is public.",
+    "",
+    "  DEBUG on   ->  a warning, and it runs. Zero setup locally.",
+    "  DEBUG off  ->  raises at boot, and says what to generate."
+  ].join('\n');
+
+  el('keyNote').textContent =
+    'config.check_secret_key raises at boot rather than serving forgeable ' +
+    'tokens once DEBUG is off, and the same check enforces a 32-byte floor ' +
+    '— HS256 with a key shorter than its own digest is weaker than the ' +
+    'algorithm it names.';
+
+  el('secureList').innerHTML = SECURE.map(function (text) {
+    return '<li><span class="step">&check;</span><span>' + text +
+      '</span></li>';
+  }).join('');
+  el('missingList').innerHTML = MISSING.map(function (text) {
+    return '<li><span class="step">&rarr;</span><span>' + text +
+      '</span></li>';
+  }).join('');
+}
+
+el('themeBtn').addEventListener('click', function () {
+  var set = document.documentElement.getAttribute('data-theme');
+  var dark = set ? set === 'dark'
+    : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');
+});
+
+el('tableBtn').addEventListener('click', function () {
+  var showTable = el('tablePanel').hidden;
+  el('tablePanel').hidden = !showTable;
+  el('modulePanel').hidden = showTable;
+  el('testPanel').hidden = showTable;
+  this.setAttribute('aria-pressed', String(showTable));
+  this.textContent = showTable ? 'Chart view' : 'Table view';
+});
+
+el('footNote').textContent =
+  'Figures measured on 21 September 2026 against this checkout with ' +
+  'pytest --cov, wc -l and pytest --collect-only, and the endpoint count by ' +
+  'building the Flask app and walking its real url_map. Everything here is ' +
+  'read from one data block, so the tiles, the charts and the table cannot ' +
+  'disagree. This is a reference implementation rather than a ' +
+  'production-audited one — the panel above says plainly what is still ' +
+  'missing. The app itself runs on your own machine and binds loopback by ' +
+  'default.';
+
+el('footNote').textContent += ' The statement counts were produced by ' +
+  MEASURED_WITH + ': coverage counts statements differently between ' +
+  'versions, so the figure is a property of the code and the interpreter ' +
+  'together.';
+
+drawTiles();
+drawModules();
+drawTests();
+drawTable();
+drawBugs();
+drawSlots();
+drawMail();
+drawCoffee();
+drawSecurity();
+</script>
+</body>
+</html>
