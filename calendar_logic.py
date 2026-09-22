@@ -34,10 +34,19 @@ def get_free_slots(provider_id: int, date_str: str):
     if not windows:
         return []
 
-    busy = _busy_ranges(provider_id, date_str)
     now = dt.datetime.now()
-    # Only today has a past to exclude. -1 is before every slot start, so
-    # every other date compares against something no slot can be at or below.
+    # A date strictly before today is entirely in the past -- every slot on
+    # it, not just the early ones -- so there is nothing left to tile. This
+    # used to fall through to the "no past to exclude" branch below with
+    # earliest = -1, which excludes nothing, and reported every slot on any
+    # past date as free.
+    if target_date < now.date():
+        return []
+
+    busy = _busy_ranges(provider_id, date_str)
+    # Only today has a partial past to exclude. -1 is before every slot
+    # start, so a future date compares against something no slot can be at
+    # or below.
     earliest = (now.hour * 60 + now.minute) if target_date == now.date() else -1
 
     slots = [slot for w in windows for slot in _tile(w, busy, earliest)]

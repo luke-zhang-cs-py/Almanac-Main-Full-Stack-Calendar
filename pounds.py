@@ -414,24 +414,41 @@ def create(user_id, draft, conn=None):
     Refuses one that would carry the running total past the limit, and says
     how much room is left rather than only that it failed, because "no"
     without a number is not something a caller can act on.
+
+    The read (`remaining`) and the write (the INSERT below) used to be two
+    separate statements with nothing tying them together: two requests for
+    the same user could each read the total before either had inserted, each
+    see room under the limit, and both commit, carrying the total past
+    LIMIT_MINOR by however much the second one added -- appointments.py's
+    equivalent race is closed with a unique index, but there is no row shape
+    here a unique index could constrain, since the limit is on a computed sum
+    rather than a duplicate. db.lock_for_write takes the write lock before
+    the read instead, so a second, concurrent create() blocks until the first
+    one has committed and then reads the total the first one actually left.
     """
     draft.validate()
     got = quote(draft.cad_cents, draft.spent_on)
 
-    left = remaining(user_id, conn=conn)
-    if got["pence"] > left:
-        raise PoundError(
-            f"That would take you past the {money(LIMIT_MINOR)} limit. "
-            f"{money(left)} is left, which is about "
-            f"{money(max(0, from_pounds(left, *legs(draft.spent_on)[:2])), FROM)}"
-            f" at that day's rate.")
+    conn = conn or db.get_db()
+    db.lock_for_write("pound_conversions", conn=conn)
+    try:
+        left = remaining(user_id, conn=conn)
+        if got["pence"] > left:
+            raise PoundError(
+                f"That would take you past the {money(LIMIT_MINOR)} limit. "
+                f"{money(left)} is left, which is about "
+                f"{money(max(0, from_pounds(left, *legs(draft.spent_on)[:2])), FROM)}"
+                f" at that day's rate.")
 
-    return db.insert(
-        """INSERT INTO pound_conversions
-           (user_id, spent_on, description, category, cad_cents)
-           VALUES (?, ?, ?, ?, ?)""",
-        (user_id, draft.spent_on, draft.description, draft.category,
-         int(draft.cad_cents)), conn=conn)
+        return db.insert(
+            """INSERT INTO pound_conversions
+               (user_id, spent_on, description, category, cad_cents)
+               VALUES (?, ?, ?, ?, ?)""",
+            (user_id, draft.spent_on, draft.description, draft.category,
+             int(draft.cad_cents)), conn=conn)
+    except Exception:
+        db.rollback(conn=conn)
+        raise
 
 
 def delete(conversion_id, owner_id, conn=None):

@@ -218,15 +218,30 @@ def notify_declined(invite_id):
 def send_due_nudges(now=None):
     """Follow up on quiet invites and close out expired ones.
 
-    Called from the existing reminder scheduler tick rather than a second
-    timer, so the process keeps one background loop and one place for it to
-    go wrong.
+    Called from the existing reminder scheduler tick, and also reachable
+    from an admin route as a manual "run nudges now" -- so two calls can be
+    in flight together with no lock between them. Both would call
+    coffee_chats.due_for_nudge() and get back the same invite, since neither
+    has updated it yet, and used to both send: `send_nudge` carries no
+    appointment_id, so mailer's own unique-index de-duplication (scoped to
+    `WHERE appointment_id IS NOT NULL`) does nothing for it either.
+
+    coffee_chats.record_nudge() is called *before* sending, not after, and
+    only sends if it reports winning the claim -- the same order mailer.send
+    uses (claim in email_log, then deliver), so the loser of the race never
+    calls send_nudge at all rather than sending and then discovering it
+    shouldn't have.
     """
     closed = coffee_chats.expire_stale(now)
     due = coffee_chats.due_for_nudge(now)
+    sent = 0
     for invite in due:
+        claimed = coffee_chats.record_nudge(
+            invite["id"], expected_nudge_count=invite["nudge_count"])
+        if not claimed:
+            continue
         send_nudge(invite["id"])
-        coffee_chats.record_nudge(invite["id"])
-    if due or closed:
-        log.info("coffee: %d nudge(s) sent, %d invite(s) expired", len(due), closed)
-    return {"nudged": len(due), "expired": closed}
+        sent += 1
+    if sent or closed:
+        log.info("coffee: %d nudge(s) sent, %d invite(s) expired", sent, closed)
+    return {"nudged": sent, "expired": closed}

@@ -135,9 +135,24 @@
   var COMPS    = seed("COMPS", {});
   var FIXTURES = seed("FIXTURES", []);
 
-  // British Summer Time ran to 25 Oct 2026 and resumes 28 Mar 2027.
+  // UK clocks go back the last Sunday of October and forward the last
+  // Sunday of March, every year -- the rule itself, computed, rather than
+  // the one winter's pair of literal dates ("2026-10-25" / "2027-03-28")
+  // this used to be, which was silently wrong for every year after that one.
+  function lastSundayISO(year, month){   // month: 1=Jan .. 12=Dec
+    // Day 0 of a month is JS's spelling for the last day of the month
+    // before it, and Date.UTC rolls month 12 over into January of the next
+    // year on its own, so this needs no special case for December.
+    var lastDay = new Date(Date.UTC(year, month, 0));
+    lastDay.setUTCDate(lastDay.getUTCDate() - lastDay.getUTCDay());
+    return lastDay.toISOString().slice(0, 10);
+  }
+
   function ukZone(dateISO){
-    return (dateISO >= "2026-10-25" && dateISO < "2027-03-28") ? "GMT" : "BST";
+    var year = Number(dateISO.slice(0, 4));
+    var bstStarts = lastSundayISO(year, 3);
+    var bstEnds   = lastSundayISO(year, 10);
+    return (dateISO >= bstStarts && dateISO < bstEnds) ? "BST" : "GMT";
   }
 
   function seedFixtures(){

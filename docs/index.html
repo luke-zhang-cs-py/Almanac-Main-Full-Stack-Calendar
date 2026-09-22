@@ -342,18 +342,18 @@ footer a { color: inherit; }
  * a fresh measurement; `python tools/refresh_figures.py` rewrites them. */
 
 var MODULES = [
-  { name: 'coffee_chats.py',               lines: 518, stmts: 190, missed:  0, does: 'the invite lifecycle: tokens, expiry, nudges, guest booking' },
-  { name: 'pounds.py',                     lines: 499, stmts: 187, missed:  0, does: 'Canadian dollars into pounds, crossed through the euro, against a ceiling' },
+  { name: 'coffee_chats.py',               lines: 540, stmts: 193, missed:  0, does: 'the invite lifecycle: tokens, expiry, nudges, guest booking' },
+  { name: 'pounds.py',                     lines: 516, stmts: 193, missed:  0, does: 'Canadian dollars into pounds, crossed through the euro, against a ceiling' },
   { name: 'notifications.py',              lines: 470, stmts: 130, missed:  0, does: 'what Almanac says, and on what occasion' },
-  { name: 'mailer.py',                     lines: 288, stmts: 128, missed:  0, does: 'transport: SMTP, the background queue, the delivery log' },
+  { name: 'mailer.py',                     lines: 288, stmts: 128, missed:  2, does: 'transport: SMTP, the background queue, the delivery log' },
+  { name: 'database.py',                   lines: 547, stmts: 113, missed:  1, does: 'one interface over SQLite and Postgres' },
   { name: 'routes/availability_routes.py', lines: 182, stmts: 103, missed:  0, does: 'provider hours and blocked dates; the public slot lookup' },
-  { name: 'database.py',                   lines: 504, stmts:  99, missed:  0, does: 'one interface over SQLite and Postgres' },
   { name: 'routes/coffee_routes.py',       lines: 200, stmts:  97, missed:  0, does: 'invites for the host, booking for the guest' },
   { name: 'offerings.py',                  lines: 250, stmts:  89, missed:  0, does: 'the priced catalogue; money as integer minor units' },
-  { name: 'calendar_logic.py',             lines: 197, stmts:  86, missed:  0, does: 'the free-slot engine' },
-  { name: 'routes/appointment_routes.py',  lines: 146, stmts:  86, missed:  0, does: 'book, list, cancel, complete' },
-  { name: 'schedule.py',                   lines: 237, stmts:  81, missed:  0, does: 'a timetable imported from the planner, and what may be reminded about' },
-  { name: 'coffee_notifications.py',       lines: 232, stmts:  80, missed:  0, does: 'invite, nudge, booked and declined mail' },
+  { name: 'calendar_logic.py',             lines: 206, stmts:  88, missed:  1, does: 'the free-slot engine' },
+  { name: 'routes/appointment_routes.py',  lines: 146, stmts:  86, missed:  2, does: 'book, list, cancel, complete' },
+  { name: 'schedule.py',                   lines: 262, stmts:  86, missed:  0, does: 'a timetable imported from the planner, and what may be reminded about' },
+  { name: 'coffee_notifications.py',       lines: 247, stmts:  84, missed:  1, does: 'invite, nudge, booked and declined mail' },
   { name: 'email_render.py',               lines: 223, stmts:  71, missed:  0, does: 'how a message is laid out — text and HTML from one description' },
   { name: 'routes/offering_routes.py',     lines: 138, stmts:  71, missed:  0, does: 'catalogue CRUD for the owner, browse for everyone' },
   { name: 'routes/auth_routes.py',         lines:  97, stmts:  56, missed:  0, does: 'register, login, me' },
@@ -364,14 +364,14 @@ var MODULES = [
   { name: 'config.py',                     lines: 148, stmts:  46, missed:  0, does: 'every setting, from the environment — and the key check' },
   { name: 'scheduler.py',                  lines:  98, stmts:  42, missed:  0, does: 'the one background timer: reminders and coffee nudges' },
   { name: 'routes/schedule_routes.py',     lines:  86, stmts:  37, missed:  0, does: 'import a planner backup, list it, throw it away' },
-  { name: 'routes/user_routes.py',         lines:  62, stmts:  32, missed:  0, does: 'providers, and the admin user list' },
+  { name: 'routes/user_routes.py',         lines:  62, stmts:  34, missed:  1, does: 'providers, and the admin user list' },
   { name: 'routes/__init__.py',            lines:  40, stmts:   9, missed:  0, does: 'the blueprint list, and the camelCase helper' }
 ];
 
 /* Left out of coverage on purpose, and named here so the omission is visible
  * rather than silent. */
 var OMITTED = [
-  { name: 'login_page.py', lines: 415, why: 'a deliberately standalone demo server with its own database' },
+  { name: 'login_page.py', lines: 424, why: 'a deliberately standalone demo server with its own database' },
   { name: 'seed_luke.py',  lines: 278, why: 'seeds a provider with hours and a catalogue' },
   { name: 'seed_data.py',  lines:  32, why: 'seeds the demo accounts' }
 ];
@@ -402,7 +402,7 @@ var TESTS = [
   { file: 'test_scheduler.py',            n: 10, of: 'the background sweep' }
 ];
 
-var TEST_LINES = 5868;
+var TEST_LINES = 5866;
 
 /* Which interpreter produced the statement counts above. It matters: coverage
  * counts a `with` block or a multi-line call differently between versions, so

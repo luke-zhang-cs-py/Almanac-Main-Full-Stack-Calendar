@@ -464,12 +464,34 @@ def due_for_nudge(now=None):
         (MAX_NUDGES, _iso(now), cutoff))
 
 
-def record_nudge(invite_id):
-    db.execute(
+def record_nudge(invite_id, expected_nudge_count=None):
+    """Mark one nudge as sent for this invite.
+
+    Without `expected_nudge_count`, this is an unconditional update -- the
+    shape a single admin clicking "nudge" on one invite wants.
+
+    With it, this is a claim: the UPDATE only takes effect if `nudge_count`
+    is still the value the caller last read it as, and the return value says
+    whether it did. That is what closes the race in
+    coffee_notifications.send_due_nudges -- the scheduler's tick and the
+    admin's manual "run nudges now" button can both call it, both read the
+    same due invite before either has updated it, and without this check
+    both would go on to send. Only the caller whose compare-and-swap
+    actually moved the row gets to send; the other sees count 0 and does
+    not, the same shape mailer._claim() uses for appointment email.
+    """
+    if expected_nudge_count is None:
+        db.execute(
+            """UPDATE coffee_invites
+               SET nudge_count = nudge_count + 1, last_nudge_at = ?
+               WHERE id = ?""",
+            (_iso(_now()), invite_id))
+        return True
+    return db.execute_rowcount(
         """UPDATE coffee_invites
            SET nudge_count = nudge_count + 1, last_nudge_at = ?
-           WHERE id = ?""",
-        (_iso(_now()), invite_id))
+           WHERE id = ? AND nudge_count = ?""",
+        (_iso(_now()), invite_id, expected_nudge_count)) > 0
 
 
 def host_view(invite):

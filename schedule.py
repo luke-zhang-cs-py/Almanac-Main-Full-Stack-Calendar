@@ -60,19 +60,44 @@ PLANNER_APP = "september-planner"
 DATE_FORMAT = "%Y-%m-%d"
 TIME_FORMAT = "%H:%M"
 
-# British Summer Time ran to 25 October 2026 and resumes 28 March 2027. The
-# same two dates the planner uses; they are here so the import can decide
-# whether a label is the local clock without asking the planner.
-_BST_ENDS = "2026-10-25"
-_BST_RESUMES = "2027-03-28"
-
 
 class ScheduleError(Exception):
     """Something the caller can fix: not a planner export, a bad date."""
 
 
+def _last_sunday(year, month):
+    """The date of the last Sunday in (year, month).
+
+    The UK clock change rule itself: back on the last Sunday of October,
+    forward on the last Sunday of March, every year, forever. Walking
+    backwards from the first of the *next* month is simpler than counting
+    forward from the day this one has 28-31 of, and needs no calendar table.
+    """
+    first_of_next_month = (
+        dt.date(year + 1, 1, 1) if month == 12 else dt.date(year, month + 1, 1)
+    )
+    last_day = first_of_next_month - dt.timedelta(days=1)
+    # date.weekday(): Monday=0 ... Sunday=6. Walking back that far from
+    # `last_day` always lands on a Sunday, whatever day of the week
+    # `last_day` itself falls on, including when it already is one.
+    return last_day - dt.timedelta(days=(last_day.weekday() - 6) % 7)
+
+
 def uk_zone(date_iso):
-    return "GMT" if _BST_ENDS <= date_iso < _BST_RESUMES else "BST"
+    """"BST" or "GMT" for a date, by the actual rule rather than a copied-in
+    pair of dates.
+
+    This used to be two literal dates -- "British Summer Time ran to 25
+    October 2026 and resumes 28 March 2027" -- good for exactly one winter
+    and silently wrong for every one after it, since nothing here re-derives
+    them from a calendar. The rule that produces those two dates does not
+    change year to year, so it is computed for whichever year the date
+    itself falls in instead.
+    """
+    date = dt.datetime.strptime(date_iso, DATE_FORMAT).date()
+    bst_starts = _last_sunday(date.year, 3)
+    bst_ends = _last_sunday(date.year, 10)
+    return "BST" if bst_starts <= date < bst_ends else "GMT"
 
 
 def is_local_clock(date_iso, label):

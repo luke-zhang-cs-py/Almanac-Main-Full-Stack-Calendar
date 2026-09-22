@@ -46,17 +46,17 @@ def admin_update_user(user_id):
             (1 if data["is_active"] else 0, user_id),
         )
     if "role" in data and data["role"] in ("admin", "provider", "client"):
+        # Same self-protection as is_active above, and for the same reason:
+        # an admin who is the only admin and demotes themselves has locked
+        # the platform out of any admin account, and nobody left with
+        # permission to undo it.
+        if target["id"] == g.current_user["id"] and data["role"] != "admin":
+            return jsonify({"error": "You can't change your own role away from admin"}), 400
         db.execute("UPDATE users SET role = ? WHERE id = ?", (data["role"], user_id))
 
-    updated = db.query("SELECT * FROM users WHERE id = ?", (user_id,), one=True)
-    return jsonify(
-        {
-            "user": {
-                "id": updated["id"],
-                "name": updated["name"],
-                "email": updated["email"],
-                "role": updated["role"],
-                "is_active": bool(updated["is_active"]),
-            }
-        }
+    updated = db.query(
+        "SELECT id, name, email, role, specialty, is_active, created_at FROM users "
+        "WHERE id = ?",
+        (user_id,), one=True,
     )
+    return jsonify({"user": camel_keys(updated)})

@@ -142,6 +142,22 @@ def execute(sql, params=(), conn=None):
     return last_id
 
 
+def execute_rowcount(sql, params=(), conn=None):
+    """UPDATE/DELETE helper for callers that need to know how many rows an
+    UPDATE actually touched -- e.g. an ``UPDATE ... WHERE`` used as a
+    compare-and-swap, where 0 means the WHERE clause no longer matched
+    because somebody else's write already moved the row, and this caller
+    lost the race and must not act as though it won it.
+    """
+    conn = conn or get_db()
+    cur = conn.cursor()
+    cur.execute(_adapt_sql(sql), params)
+    count = cur.rowcount
+    conn.commit()
+    cur.close()
+    return count
+
+
 def insert(sql, params=(), conn=None):
     """
     INSERT helper that returns the new row's id on *both* backends.
@@ -161,6 +177,33 @@ def insert(sql, params=(), conn=None):
     conn.commit()
     cur.close()
     return new_id
+
+
+def lock_for_write(table, conn=None):
+    """Block until any other writer's equivalent lock on `table` is released.
+
+    Both backends otherwise let a check-then-act race through: a SELECT that
+    totals up existing rows and a later INSERT are two separate statements,
+    and neither takes a lock that stops a second connection from running the
+    same SELECT before the first connection's INSERT has committed. Both
+    reads then see the same "there is room" total and both writes go ahead,
+    so a running total guarded only by a read-then-insert check (see
+    pounds.create) can end up over whatever the check was enforcing.
+
+    Taking this lock first closes the gap: the second caller's equivalent
+    call blocks here until the first caller commits (or rolls back), so its
+    own read afterwards sees what the first caller actually left behind.
+    SQLite normally takes its write lock lazily, at the first INSERT/UPDATE/
+    DELETE of a transaction; BEGIN IMMEDIATE takes it immediately instead.
+    Postgres locks rows, not the whole connection, so the equivalent there is
+    an explicit table lock.
+    """
+    conn = conn or get_db()
+    if _IS_POSTGRES:
+        conn.cursor().execute(f"LOCK TABLE {table} IN EXCLUSIVE MODE")
+    else:
+        conn.execute("BEGIN IMMEDIATE")
+    return conn
 
 
 def rollback(conn=None):

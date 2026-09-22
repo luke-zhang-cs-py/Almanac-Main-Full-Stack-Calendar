@@ -21,10 +21,14 @@ import jwt
 from flask import Flask, Response, g, jsonify, request
 from werkzeug.security import check_password_hash, generate_password_hash
 
+import config
+
 # ----------------------------------------------------------------------
 # Config — edit these three lines for your setup
 # ----------------------------------------------------------------------
-SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-change-me-in-production")
+# Same placeholder config.py uses, imported rather than re-typed, so
+# check_secret_key() below (also imported, not re-implemented) recognizes it.
+SECRET_KEY = os.environ.get("SECRET_KEY", config.DEV_SECRET_KEY)
 JWT_EXP_HOURS = 24
 DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(os.path.abspath(__file__)), "login_users.db"))
 
@@ -410,6 +414,11 @@ if __name__ == "__main__":
     # thing somebody would want running beside it.
     port = int(os.environ.get("PORT", "5006"))
     debug = os.environ.get("FLASK_DEBUG", "1") == "1"
+    # Same guard app.py runs before serving: a process signing sessions with
+    # the committed placeholder is only acceptable while DEBUG is on. This
+    # file used to have no equivalent of it at all, so an off-debug run here
+    # would forge admin tokens as readily as with the real key.
+    config.check_secret_key(app.config["SECRET_KEY"], debug)
     print(f"Login page running at http://localhost:{port}")
     print(f"User database: {DB_PATH}")
     app.run(host=host, port=port, debug=debug)
