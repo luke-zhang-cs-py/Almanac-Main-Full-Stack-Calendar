@@ -5,6 +5,8 @@
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.12-blue.svg)](https://www.python.org/)
 
 **[Read the overview →](https://luke-zhang-cs-py.github.io/Almanac-Main-Full-Stack-Calendar/)**
+(or open [`docs/index.html`](docs/index.html) directly if the live page
+won't load — it's the same file GitHub Pages serves)
 — what a free slot has to survive, how five kinds of email get sent exactly
 once, and every bug this thing has had.
 
