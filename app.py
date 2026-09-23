@@ -2,11 +2,11 @@ import logging
 
 from flask import Flask, render_template
 
-import config
-import database as db
-import mailer
-import scheduler
-from config import Config
+from core import config
+from core import database as db
+from notify import mailer
+from notify import scheduler
+from core.config import Config
 from routes.appointment_routes import bp as appointment_bp
 from routes.auth_routes import bp as auth_bp
 from routes.availability_routes import bp as availability_bp

@@ -31,10 +31,10 @@ import logging
 
 from flask import current_app
 
-import database as db
-import mailer
-import schedule
-from email_render import details, lead_time, render, url, when
+from core import database as db
+from notify import mailer
+from domain import schedule
+from notify.email_render import details, lead_time, render, url, when
 
 log = logging.getLogger("almanac.notifications")
 
@@ -335,7 +335,7 @@ def send_schedule_reminders(now=None):
 
     One message per event, marked on the row rather than in email_log: the
     de-duplicating index there is declared WHERE appointment_id IS NOT NULL,
-    and a class is not an appointment. See schedule.py.
+    and a class is not an appointment. See domain/schedule.py.
 
     Returns the number of emails queued.
     """

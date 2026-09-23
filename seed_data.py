@@ -3,8 +3,8 @@ Creates a starter admin account so there's a way into the admin views on a
 brand-new database. Run once with:  python seed_data.py
 """
 
-import database as db
-from auth import hash_password
+from core import database as db
+from accounts.auth import hash_password
 
 ADMIN_EMAIL = "admin@almanac.local"
 ADMIN_PASSWORD = "admin12345"

@@ -17,7 +17,7 @@ import datetime as dt
 
 import pytest
 
-import database as db
+from core import database as db
 
 TIMESTAMPED = [
     ("users", "created_at"),
@@ -36,7 +36,7 @@ def parses(value):
 
 def test_every_default_matches_the_one_format(ctx, provider, booking, offering):
     """Whatever wrote the row -- a schema default or the application."""
-    import coffee_chats as cc
+    from domain import coffee_chats as cc
     cc.create_invite(provider["id"], cc.InviteRequest("stamp@test.local"))
 
     for table, column in TIMESTAMPED:
@@ -50,7 +50,7 @@ def test_the_default_is_local_time_not_utc(ctx, provider):
     """Every other time in this project is local -- a provider's 09:00 means
     09:00 where they are. A created_at in UTC was the odd one out, and it was
     being compared against the others."""
-    import coffee_chats as cc
+    from domain import coffee_chats as cc
     invite = cc.create_invite(provider["id"], cc.InviteRequest("tz@test.local"))
     written = parses(invite["created_at"])
     drift = abs((dt.datetime.now() - written).total_seconds())
@@ -60,7 +60,7 @@ def test_the_default_is_local_time_not_utc(ctx, provider):
 def test_the_schema_default_and_the_application_agree(ctx, provider):
     """created_at comes from the database, expires_at from the application,
     and due_for_nudge compares one against the other."""
-    import coffee_chats as cc
+    from domain import coffee_chats as cc
     invite = cc.create_invite(provider["id"], cc.InviteRequest("agree@test.local"))
     created, expires = invite["created_at"], invite["expires_at"]
     assert len(created) == len(expires)
@@ -91,7 +91,7 @@ def test_an_invite_is_not_nudged_before_the_interval_is_up(ctx, provider):
     "2026-09-05T21:30:00", the space sorted first, and this invite got chased
     early.
     """
-    import coffee_chats as cc
+    from domain import coffee_chats as cc
     invite = cc.create_invite(provider["id"], cc.InviteRequest("early@test.local"))
     created = parses(invite["created_at"])
 
@@ -107,7 +107,7 @@ def test_an_invite_is_not_nudged_before_the_interval_is_up(ctx, provider):
 
 def test_an_invite_is_nudged_once_the_interval_really_is_up(ctx, provider):
     """The other half: the fix must not have stopped nudges altogether."""
-    import coffee_chats as cc
+    from domain import coffee_chats as cc
     invite = cc.create_invite(provider["id"], cc.InviteRequest("due@test.local"))
     created = parses(invite["created_at"])
     now = created + dt.timedelta(days=cc.NUDGE_AFTER_DAYS, hours=1)
@@ -118,7 +118,7 @@ def test_a_message_is_never_sent_before_it_was_queued(ctx, provider):
     """created_at came from the schema in UTC and sent_at from the
     application in local time, so on any machine west of Greenwich the
     delivery log showed messages sent hours before they were queued."""
-    import mailer
+    from notify import mailer
     mailer.send(mailer.Message(kind="test", to="order@test.local",
                                subject="s", text="t"))
     assert mailer.wait_until_idle(5.0)

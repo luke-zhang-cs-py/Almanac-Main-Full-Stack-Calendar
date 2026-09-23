@@ -30,7 +30,7 @@ import datetime as dt
 
 import pytest
 
-import schedule
+from domain import schedule
 
 
 def export(events):
@@ -55,7 +55,7 @@ def in_minutes(minutes):
 
 
 def sent(kind=None):
-    import database as db
+    from core import database as db
     if kind:
         return db.query("SELECT * FROM email_log WHERE kind = ? ORDER BY id",
                         (kind,))
@@ -208,7 +208,7 @@ def import_one(client, booking, minutes, **over):
 
 
 def test_a_class_inside_the_window_is_emailed(client, booking, ctx):
-    import notifications
+    from notify import notifications
     import_one(client, booking, 20)
     assert notifications.send_schedule_reminders() == 1
     rows = sent("schedule_soon")
@@ -217,14 +217,14 @@ def test_a_class_inside_the_window_is_emailed(client, booking, ctx):
 
 
 def test_a_class_beyond_the_window_is_not(client, booking, ctx):
-    import notifications
+    from notify import notifications
     import_one(client, booking, 90)
     assert notifications.send_schedule_reminders() == 0
     assert sent("schedule_soon") == []
 
 
 def test_a_class_already_under_way_is_not_chased(client, booking, ctx):
-    import notifications
+    from notify import notifications
     import_one(client, booking, -10)
     assert notifications.send_schedule_reminders() == 0
 
@@ -232,7 +232,7 @@ def test_a_class_already_under_way_is_not_chased(client, booking, ctx):
 def test_a_class_on_another_clock_is_never_emailed(client, booking, ctx):
     """The stored time is not the local instant, so there is no moment this
     could be sent at that would be right."""
-    import notifications
+    from notify import notifications
     import_one(client, booking, 20, id="far", tz="EST")
     assert notifications.send_schedule_reminders() == 0
     assert sent("schedule_soon") == []
@@ -242,7 +242,7 @@ def test_one_email_per_class_however_often_it_scans(client, booking, ctx):
     """email_log's unique index is declared WHERE appointment_id IS NOT NULL
     and so de-duplicates nothing here. Without the mark on the row, the
     default cadence would send this four times."""
-    import notifications
+    from notify import notifications
     import_one(client, booking, 25)
     assert notifications.send_schedule_reminders() == 1
     for _ in range(3):
@@ -253,7 +253,7 @@ def test_one_email_per_class_however_often_it_scans(client, booking, ctx):
 def test_a_moved_class_is_reminded_about_again(client, booking, ctx):
     """The mark is cleared on update, because a class that has moved is a
     different moment and the first reminder was about the old one."""
-    import notifications
+    from notify import notifications
     import_one(client, booking, 25)
     assert notifications.send_schedule_reminders() == 1
 
@@ -264,7 +264,7 @@ def test_a_moved_class_is_reminded_about_again(client, booking, ctx):
 
 
 def test_the_reminder_can_be_turned_off(client, booking, ctx):
-    import notifications
+    from notify import notifications
     from flask import current_app
     import_one(client, booking, 20)
     current_app.config["IMMINENT_ENABLED"] = False
@@ -275,7 +275,7 @@ def test_the_reminder_can_be_turned_off(client, booking, ctx):
 
 
 def test_the_reminder_says_what_and_when(client, booking, ctx):
-    import notifications
+    from notify import notifications
     date, time = import_one(client, booking, 20)
     notifications.send_schedule_reminders()
     row = sent("schedule_soon")[0]
@@ -294,8 +294,8 @@ def test_a_row_with_an_unreadable_time_still_gets_a_sentence(client, booking,
     between "09:13" and "09:43" as a string while failing to parse as a
     time, which is the only shape that reaches the fallback.
     """
-    import database as db
-    import notifications
+    from core import database as db
+    from notify import notifications
 
     db.insert(
         "INSERT INTO schedule_events (user_id, source_id, event_date,"

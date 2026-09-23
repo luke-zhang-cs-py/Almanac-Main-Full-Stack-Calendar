@@ -10,7 +10,7 @@ import datetime as dt
 
 import pytest
 
-from email_render import (details, escape, lead_time, long_date, render, url,
+from notify.email_render import (details, escape, lead_time, long_date, render, url,
                           when)
 
 

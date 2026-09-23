@@ -35,7 +35,7 @@ from email.utils import formatdate, make_msgid
 
 from flask import current_app
 
-import database as db
+from core import database as db
 
 log = logging.getLogger("almanac.mail")
 

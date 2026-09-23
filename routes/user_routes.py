@@ -1,7 +1,7 @@
 from flask import Blueprint, g, jsonify, request
 
-import database as db
-from auth import roles_required, token_required
+from core import database as db
+from accounts.auth import roles_required, token_required
 from routes import camel_keys
 
 bp = Blueprint("user_routes", __name__, url_prefix="/api")

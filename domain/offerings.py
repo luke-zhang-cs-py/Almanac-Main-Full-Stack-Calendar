@@ -1,6 +1,6 @@
 """
-offerings.py
--------------
+domain/offerings.py
+--------------------
 What a provider offers, and what it costs.
 
 A provider used to have one free-text `specialty` on their user row, which
@@ -25,7 +25,7 @@ set of lengths that divide cleanly into the usual 15- and 30-minute grids.
 import logging
 from dataclasses import dataclass, fields
 
-import database as db
+from core import database as db
 
 log = logging.getLogger(__name__)
 

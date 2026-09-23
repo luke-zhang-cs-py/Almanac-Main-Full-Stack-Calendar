@@ -13,14 +13,14 @@ import datetime
 
 import pytest
 
-import coffee_chats as cc
-import coffee_notifications as cn
+from domain import coffee_chats as cc
+from notify import coffee_notifications as cn
 
 
 @pytest.fixture
 def outbox(monkeypatch):
     """Every Message that reaches the transport, in order."""
-    import mailer
+    from notify import mailer
     box = []
 
     def capture(message):
@@ -126,7 +126,7 @@ def test_nudging_nothing_sends_nothing(ctx, outbox):
 # ------------------------------------------------------------------ booking
 
 def test_the_host_hears_that_an_invite_converted(ctx, provider, offering, outbox):
-    from calendar_logic import slot_starts_for
+    from domain.calendar_logic import slot_starts_for
     invite = an_invite(provider, guest_email="converts@test.local",
                        guest_name="Ada", offering_id=offering["id"])
     day = (datetime.date.today() + datetime.timedelta(days=5)).isoformat()
@@ -175,7 +175,7 @@ def test_declining_nothing_sends_nothing(ctx, outbox):
 # -------------------------------------------------------------- the sweep
 
 def test_the_sweep_nudges_the_quiet_and_closes_the_stale(ctx, provider, outbox):
-    import database as db
+    from core import database as db
     quiet = an_invite(provider, guest_email="sweep1@test.local")
     stale = an_invite(provider, guest_email="sweep2@test.local")
 

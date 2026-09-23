@@ -1,6 +1,6 @@
 """
-pounds.py
-----------
+domain/pounds.py
+-----------------
 Canadian dollars into pounds, against a 1,000 ceiling.
 
 A provider here prices in Canadian dollars -- `offerings.price_cents` with a
@@ -65,7 +65,7 @@ import os
 import threading
 from dataclasses import dataclass
 
-import database as db
+from core import database as db
 
 log = logging.getLogger(__name__)
 
@@ -92,8 +92,15 @@ RATE_PLACES = 6
 
 DATE_FORMAT = "%Y-%m-%d"
 
-RATES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                          "rates", "eur_legs.csv")
+# rates/ sits at the project root rather than inside this package, because
+# neither the module nor this project owns it: tools/refresh_pound_rates.py
+# rewrites the CSV from the ECB's published history, and rates/cases.json
+# beside it is the wallet project's fixture, carried here so the two
+# implementations can be checked against the same numbers. So this walks up
+# out of domain/ deliberately.
+RATES_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "rates", "eur_legs.csv")
 
 _lock = threading.Lock()
 _rates = None           # {date: {"CAD": (num, scale), "GBP": (num, scale)}}

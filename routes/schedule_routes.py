@@ -16,10 +16,10 @@ posts its contents.
 
 from flask import Blueprint, g, jsonify, request
 
-import schedule
-from auth import token_required
+from domain import schedule
+from accounts.auth import token_required
 from routes import camel_keys
-from schedule import ScheduleError
+from domain.schedule import ScheduleError
 
 bp = Blueprint("schedule_routes", __name__, url_prefix="/api")
 

@@ -16,8 +16,8 @@ import datetime as dt
 
 import pytest
 
-import coffee_chats
-from coffee_chats import InviteError
+from domain import coffee_chats
+from domain.coffee_chats import InviteError
 
 
 def an_invite(client, provider, **over):
@@ -85,7 +85,7 @@ def test_an_unreadable_expiry_is_treated_as_not_expired(ctx):
 
 
 def test_an_expired_link_says_so_and_marks_itself(client, provider, ctx):
-    import database as db
+    from core import database as db
 
     invite = an_invite(client, provider, email="late@test.local")
     db.execute("UPDATE coffee_invites SET expires_at = ? WHERE id = ?",
@@ -129,7 +129,7 @@ def test_a_link_already_used_to_book(client, provider, ctx):
 
 
 def test_a_note_from_the_guest_reaches_the_appointment(client, provider, ctx):
-    import database as db
+    from core import database as db
 
     invite = an_invite(client, provider, email="chatty@test.local")
     slots = coffee_chats.available_slots(coffee_chats.get_invite(invite["id"]))
@@ -149,7 +149,7 @@ def test_losing_the_race_for_a_slot_is_a_sentence_not_a_500(
     """Two guests can pass the free-slot check and then both insert. The
     unique index is what actually prevents the double-booking; this is the
     backstop that turns its error into something a guest can read."""
-    import database as db
+    from core import database as db
 
     invite = an_invite(client, provider, email="racer@test.local")
     slots = coffee_chats.available_slots(coffee_chats.get_invite(invite["id"]))

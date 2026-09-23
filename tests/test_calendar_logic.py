@@ -12,7 +12,7 @@ def a_weekday():
 
 
 def test_free_slots_respect_the_window(ctx, provider):
-    from calendar_logic import get_free_slots
+    from domain.calendar_logic import get_free_slots
     slots = get_free_slots(provider["id"], a_weekday())
     assert slots
     assert slots[0]["start"] == "09:00"
@@ -20,26 +20,26 @@ def test_free_slots_respect_the_window(ctx, provider):
 
 
 def test_free_slots_are_the_configured_size(ctx, provider):
-    from calendar_logic import get_free_slots
+    from domain.calendar_logic import get_free_slots
     slots = get_free_slots(provider["id"], a_weekday())
     assert slots[0]["end"] == "09:15", "15-minute grid"
 
 
 def test_no_availability_means_no_slots(ctx, client):
-    from calendar_logic import get_free_slots
+    from domain.calendar_logic import get_free_slots
     from tests.conftest import register
     _, user = register(client, "empty@test.local", role="provider")
     assert get_free_slots(user["id"], a_weekday()) == []
 
 
 def test_bad_date_raises(ctx, provider):
-    from calendar_logic import get_free_slots
+    from domain.calendar_logic import get_free_slots
     with pytest.raises(ValueError):
         get_free_slots(provider["id"], "not-a-date")
 
 
 def test_single_slot_booking_is_free(ctx, provider):
-    from calendar_logic import is_slot_free
+    from domain.calendar_logic import is_slot_free
     assert is_slot_free(provider["id"], a_weekday(), "09:00", "09:15")
 
 
@@ -47,7 +47,7 @@ def test_a_booking_longer_than_one_slot_is_free(ctx, provider):
     """The regression. is_slot_free used to require an exact match against
     one generated slot, which made every multi-slot booking impossible and
     reported it as 'someone just took that slot'."""
-    from calendar_logic import is_slot_free
+    from domain.calendar_logic import is_slot_free
     day = a_weekday()
     assert is_slot_free(provider["id"], day, "09:00", "10:00"), "60 min over a 15-min grid"
     assert is_slot_free(provider["id"], day, "09:00", "09:45"), "45 min"
@@ -55,17 +55,17 @@ def test_a_booking_longer_than_one_slot_is_free(ctx, provider):
 
 
 def test_a_booking_that_overruns_the_day_is_not_free(ctx, provider):
-    from calendar_logic import is_slot_free
+    from domain.calendar_logic import is_slot_free
     assert not is_slot_free(provider["id"], a_weekday(), "16:30", "17:30")
 
 
 def test_a_booking_off_the_grid_is_not_free(ctx, provider):
-    from calendar_logic import is_slot_free
+    from domain.calendar_logic import is_slot_free
     assert not is_slot_free(provider["id"], a_weekday(), "09:07", "09:22")
 
 
 def test_slot_starts_for_shrinks_as_the_session_lengthens(ctx, provider):
-    from calendar_logic import slot_starts_for
+    from domain.calendar_logic import slot_starts_for
     day = a_weekday()
     counts = {d: len(slot_starts_for(provider["id"], day, d))
               for d in (15, 30, 45, 60, 90)}
@@ -75,13 +75,13 @@ def test_slot_starts_for_shrinks_as_the_session_lengthens(ctx, provider):
 
 
 def test_slot_starts_never_overrun_the_window(ctx, provider):
-    from calendar_logic import slot_starts_for
+    from domain.calendar_logic import slot_starts_for
     for start in slot_starts_for(provider["id"], a_weekday(), 90):
         assert start["end"] <= "17:00"
 
 
 def test_a_booked_slot_disappears(ctx, provider, client):
-    from calendar_logic import get_free_slots, is_slot_free
+    from domain.calendar_logic import get_free_slots, is_slot_free
     from tests.conftest import register
     day = a_weekday()
     before = len(get_free_slots(provider["id"], day))
@@ -99,7 +99,7 @@ def test_a_booked_slot_disappears(ctx, provider, client):
 def test_a_booking_cannot_straddle_a_taken_slot(ctx, provider, client):
     """A 60-minute session must fail if any slot inside it is taken, not just
     the first one."""
-    from calendar_logic import is_slot_free
+    from domain.calendar_logic import is_slot_free
     from tests.conftest import register
     day = a_weekday()
     token, _ = register(client, "straddle@test.local")
@@ -132,13 +132,13 @@ def a_window(start="09:00", end="12:00", minutes=60):
 def test_a_window_with_no_past_keeps_every_slot():
     """The control. -1 is what every date except today is compared against,
     so nothing is dropped and the whole window tiles."""
-    from calendar_logic import _tile
+    from domain.calendar_logic import _tile
     slots = _tile(a_window(), busy=[], earliest=-1)
     assert [s["start"] for s in slots] == ["09:00", "10:00", "11:00"]
 
 
 def test_slots_that_have_already_started_are_dropped():
-    from calendar_logic import _tile
+    from domain.calendar_logic import _tile
     # 10:30. The 09:00 and 10:00 slots have started; 11:00 has not.
     slots = _tile(a_window(), busy=[], earliest=10 * 60 + 30)
     assert [s["start"] for s in slots] == ["11:00"]
@@ -148,7 +148,7 @@ def test_a_slot_starting_exactly_now_is_dropped():
     """The boundary, and the reason the comparison is `<=` rather than `<`.
     A slot starting this very minute is not bookable -- by the time anyone
     confirms it, it has begun."""
-    from calendar_logic import _tile
+    from domain.calendar_logic import _tile
     slots = _tile(a_window(), busy=[], earliest=10 * 60)
     assert [s["start"] for s in slots] == ["11:00"], (
         "the slot starting exactly at `earliest` should not be offered")
@@ -158,14 +158,14 @@ def test_a_window_entirely_in_the_past_offers_nothing():
     """Not an error, and not the whole window either: asking for today at
     six in the evening should return an empty list rather than this
     morning's slots."""
-    from calendar_logic import _tile
+    from domain.calendar_logic import _tile
     assert _tile(a_window(), busy=[], earliest=23 * 60) == []
 
 
 def test_the_past_filter_and_the_busy_filter_both_apply():
     """They are separate `continue`s over the same cursor, so a slot has to
     clear both. 10:30 kills 09:00 and 10:00; the booking kills 11:00."""
-    from calendar_logic import _tile
+    from domain.calendar_logic import _tile
     slots = _tile(a_window(end="13:00"), busy=[(11 * 60, 12 * 60)],
                   earliest=10 * 60 + 30)
     assert [s["start"] for s in slots] == ["12:00"]
@@ -179,7 +179,7 @@ def test_today_is_the_only_date_that_filters(ctx, provider, monkeypatch):
     exercised here against the same frozen moment, so the test says the same
     thing at 4am as at 4pm.
     """
-    import calendar_logic
+    from domain import calendar_logic
 
     real = datetime.datetime
     frozen = real(2026, 9, 16, 10, 30)      # a Wednesday, mid-morning

@@ -186,6 +186,11 @@ footer a { color: inherit; }
          from standalone/planner/ and fails if this copy has drifted. -->
     <a class="btn" href="planner.html"
        title="One self-contained file, no server, invented sample data">Open the planner</a>
+    <!-- The slot engine on its own, ported to JavaScript.
+         tools/build_static.py refuses to publish it if the port and
+         domain/calendar_logic.py disagree about a single slot. -->
+    <a class="btn" href="app/"
+       title="The free-slot engine, running in the browser. No account, no database, nothing saved.">Try the slot engine</a>
   </div>
 </div>
 
@@ -196,12 +201,21 @@ footer a { color: inherit; }
 <section class="panel">
   <h2>What a free slot is, and what it has to survive</h2>
   <p class="sub">
-    <code>calendar_logic.py</code> turns a provider's recurring weekly hours,
+    <code>domain/calendar_logic.py</code> turns a provider's recurring weekly hours,
     their one-off blocked dates and their existing bookings into the list of
     times a client may actually pick, for any date.
   </p>
   <ul class="flow" id="slotList"></ul>
   <p id="raceNote"></p>
+  <p class="note">
+    This is the one piece of Almanac that needs no server, so it is published
+    on its own: <a href="app/">set some hours, add a block or a booking and
+    watch the slots change &rarr;</a> It is the engine and nothing else — no
+    account, no database, nothing saved — and the JavaScript it runs is a port
+    of the same module, which <code>tools/build_static.py</code> checks against
+    the Python in a real browser and refuses to publish on a single
+    disagreement.
+  </p>
 </section>
 
 <!-- ====================================================== the email -->
@@ -334,7 +348,7 @@ footer a { color: inherit; }
 /* Every number on this page is read from here, so the tiles, the charts and
  * the table cannot drift apart.
  *
- * Measured on 12 September 2026 in the repository: `pytest -q --cov` for the
+ * Measured on 23 September 2026 in the repository: `pytest -q --cov` for the
  * statements and what is uncovered, `wc -l` for length, `pytest
  * --collect-only -q` for the test counts, and the endpoint count by walking
  * the real url_map rather than grepping for decorators. Not estimated.
@@ -342,30 +356,34 @@ footer a { color: inherit; }
  * a fresh measurement; `python tools/refresh_figures.py` rewrites them. */
 
 var MODULES = [
-  { name: 'coffee_chats.py',               lines: 540, stmts: 193, missed:  0, does: 'the invite lifecycle: tokens, expiry, nudges, guest booking' },
-  { name: 'pounds.py',                     lines: 516, stmts: 193, missed:  0, does: 'Canadian dollars into pounds, crossed through the euro, against a ceiling' },
-  { name: 'notifications.py',              lines: 470, stmts: 130, missed:  0, does: 'what Almanac says, and on what occasion' },
-  { name: 'mailer.py',                     lines: 288, stmts: 128, missed:  2, does: 'transport: SMTP, the background queue, the delivery log' },
-  { name: 'database.py',                   lines: 547, stmts: 113, missed:  1, does: 'one interface over SQLite and Postgres' },
-  { name: 'routes/availability_routes.py', lines: 182, stmts: 103, missed:  0, does: 'provider hours and blocked dates; the public slot lookup' },
-  { name: 'routes/coffee_routes.py',       lines: 200, stmts:  97, missed:  0, does: 'invites for the host, booking for the guest' },
-  { name: 'offerings.py',                  lines: 250, stmts:  89, missed:  0, does: 'the priced catalogue; money as integer minor units' },
-  { name: 'calendar_logic.py',             lines: 206, stmts:  88, missed:  1, does: 'the free-slot engine' },
-  { name: 'routes/appointment_routes.py',  lines: 146, stmts:  86, missed:  2, does: 'book, list, cancel, complete' },
-  { name: 'schedule.py',                   lines: 262, stmts:  86, missed:  0, does: 'a timetable imported from the planner, and what may be reminded about' },
-  { name: 'coffee_notifications.py',       lines: 247, stmts:  84, missed:  1, does: 'invite, nudge, booked and declined mail' },
-  { name: 'email_render.py',               lines: 223, stmts:  71, missed:  0, does: 'how a message is laid out — text and HTML from one description' },
-  { name: 'routes/offering_routes.py',     lines: 138, stmts:  71, missed:  0, does: 'catalogue CRUD for the owner, browse for everyone' },
-  { name: 'routes/auth_routes.py',         lines:  97, stmts:  56, missed:  0, does: 'register, login, me' },
-  { name: 'routes/pound_routes.py',        lines:  97, stmts:  50, missed:  0, does: 'one ledger per account: record, list, quote, remove' },
-  { name: 'app.py',                        lines:  81, stmts:  49, missed:  0, does: 'the factory and the blueprint registration' },
-  { name: 'routes/email_routes.py',        lines:  89, stmts:  49, missed:  0, does: 'the admin delivery log, a test send, a manual scan' },
-  { name: 'auth.py',                       lines:  84, stmts:  48, missed:  0, does: 'JWTs, and the two decorators that guard every route' },
-  { name: 'config.py',                     lines: 148, stmts:  46, missed:  0, does: 'every setting, from the environment — and the key check' },
-  { name: 'scheduler.py',                  lines:  98, stmts:  42, missed:  0, does: 'the one background timer: reminders and coffee nudges' },
-  { name: 'routes/schedule_routes.py',     lines:  86, stmts:  37, missed:  0, does: 'import a planner backup, list it, throw it away' },
-  { name: 'routes/user_routes.py',         lines:  62, stmts:  34, missed:  1, does: 'providers, and the admin user list' },
-  { name: 'routes/__init__.py',            lines:  40, stmts:   9, missed:  0, does: 'the blueprint list, and the camelCase helper' }
+  { name: 'domain/coffee_chats.py',         lines: 540, stmts: 193, missed:  0, does: 'the invite lifecycle: tokens, expiry, nudges, guest booking' },
+  { name: 'domain/pounds.py',               lines: 523, stmts: 193, missed:  0, does: 'Canadian dollars into pounds, crossed through the euro, against a ceiling' },
+  { name: 'notify/notifications.py',        lines: 470, stmts: 130, missed:  0, does: 'what Almanac says, and on what occasion' },
+  { name: 'notify/mailer.py',               lines: 288, stmts: 128, missed:  2, does: 'transport: SMTP, the background queue, the delivery log' },
+  { name: 'core/database.py',               lines: 547, stmts: 113, missed:  1, does: 'one interface over SQLite and Postgres' },
+  { name: 'routes/availability_routes.py',  lines: 182, stmts: 103, missed:  0, does: 'provider hours and blocked dates; the public slot lookup' },
+  { name: 'routes/coffee_routes.py',        lines: 200, stmts:  97, missed:  0, does: 'invites for the host, booking for the guest' },
+  { name: 'domain/offerings.py',            lines: 250, stmts:  89, missed:  0, does: 'the priced catalogue; money as integer minor units' },
+  { name: 'domain/calendar_logic.py',       lines: 206, stmts:  88, missed:  1, does: 'the free-slot engine' },
+  { name: 'domain/schedule.py',             lines: 262, stmts:  86, missed:  0, does: 'a timetable imported from the planner, and what may be reminded about' },
+  { name: 'routes/appointment_routes.py',   lines: 146, stmts:  86, missed:  2, does: 'book, list, cancel, complete' },
+  { name: 'notify/coffee_notifications.py', lines: 247, stmts:  84, missed:  1, does: 'invite, nudge, booked and declined mail' },
+  { name: 'notify/email_render.py',         lines: 223, stmts:  71, missed:  0, does: 'how a message is laid out — text and HTML from one description' },
+  { name: 'routes/offering_routes.py',      lines: 138, stmts:  71, missed:  0, does: 'catalogue CRUD for the owner, browse for everyone' },
+  { name: 'routes/auth_routes.py',          lines:  97, stmts:  56, missed:  0, does: 'register, login, me' },
+  { name: 'routes/pound_routes.py',         lines:  97, stmts:  50, missed:  0, does: 'one ledger per account: record, list, quote, remove' },
+  { name: 'app.py',                         lines:  81, stmts:  49, missed:  0, does: 'the factory and the blueprint registration' },
+  { name: 'routes/email_routes.py',         lines:  89, stmts:  49, missed:  0, does: 'the admin delivery log, a test send, a manual scan' },
+  { name: 'accounts/auth.py',               lines:  84, stmts:  48, missed:  0, does: 'JWTs, and the two decorators that guard every route' },
+  { name: 'core/config.py',                 lines: 152, stmts:  46, missed:  0, does: 'every setting, from the environment — and the key check' },
+  { name: 'notify/scheduler.py',            lines:  98, stmts:  42, missed:  0, does: 'the one background timer: reminders and coffee nudges' },
+  { name: 'routes/schedule_routes.py',      lines:  86, stmts:  37, missed:  0, does: 'import a planner backup, list it, throw it away' },
+  { name: 'routes/user_routes.py',          lines:  62, stmts:  34, missed:  1, does: 'providers, and the admin user list' },
+  { name: 'routes/__init__.py',             lines:  40, stmts:   9, missed:  0, does: 'the blueprint list, and the camelCase helper' },
+  { name: 'accounts/__init__.py',           lines:  19, stmts:   0, missed:  0, does: 'why the security boundary is its own directory' },
+  { name: 'core/__init__.py',               lines:  20, stmts:   0, missed:  0, does: 'the plumbing everything sits on, and the direction of the arrows' },
+  { name: 'domain/__init__.py',             lines:  25, stmts:   0, missed:  0, does: 'what the booking rules are, and what they are not allowed to import' },
+  { name: 'notify/__init__.py',             lines:  29, stmts:   0, missed:  0, does: 'the email stack, bottom to top, and why it is not called email' }
 ];
 
 /* Left out of coverage on purpose, and named here so the omission is visible
@@ -394,6 +412,7 @@ var TESTS = [
   { file: 'test_coffee_notifications.py', n: 17, of: 'invite, nudge, booked and declined mail' },
   { file: 'test_config_and_mailer.py',    n: 17, of: 'the key check, and a mail server that refuses' },
   { file: 'test_last_resorts.py',         n: 17, of: 'the arms that run only after something else went wrong' },
+  { file: 'test_static_demo.py',          n: 14, of: 'that the published slot-engine demo has not drifted from what built it' },
   { file: 'test_api_naming.py',           n: 13, of: 'that the whole API speaks one language on the wire' },
   { file: 'test_coffee_edges.py',         n: 13, of: 'expired links, lost races, and payloads nobody meant to send' },
   { file: 'test_timestamps.py',           n: 12, of: 'that every timestamp is written the same way' },
@@ -402,7 +421,7 @@ var TESTS = [
   { file: 'test_scheduler.py',            n: 10, of: 'the background sweep' }
 ];
 
-var TEST_LINES = 5866;
+var TEST_LINES = 6069;
 
 /* Which interpreter produced the statement counts above. It matters: coverage
  * counts a `with` block or a multi-line call differently between versions, so
@@ -453,12 +472,12 @@ var BUGS = [
    'SQLite’s default wrote <code>"2026-09-05 22:30:15"</code> in UTC, the application wrote <code>"2026-09-05T18:30:15"</code> in local time, and Postgres wrote a real timestamp. These columns are TEXT and get compared as strings — and a space sorts before a "T", so any <code>created_at</code> on the same calendar date as the cutoff sorted before it whatever the actual times were. The nudge scan fired early.',
    'Asking why an invite was nudged too soon', 'fixed'],
   ['The standalone login server could not log anybody in',
-   'It built a JWT with an integer <code>sub</code> where <code>auth.py</code> uses <code>str(user["id"])</code> — with a comment next to it explaining that RFC 7519 requires a string and PyJWT enforces it. That fix reached one copy and not the other, so the standalone server issued tokens it then rejected on the next request.',
+   'It built a JWT with an integer <code>sub</code> where <code>accounts/auth.py</code> uses <code>str(user["id"])</code> — with a comment next to it explaining that RFC 7519 requires a string and PyJWT enforces it. That fix reached one copy and not the other, so the standalone server issued tokens it then rejected on the next request.',
    'The first audit, which is also what put a test suite here', 'fixed'],
   ['The API spoke two languages',
    'Guest endpoints returned camelCase from hand-built dicts; host endpoints returned <code>dict(row)</code> straight from SQLite, so the same field arrived as <code>guest_email</code> or <code>guestEmail</code> depending on which handler you hit. One language on the wire now, with a test file that checks it.',
    'Writing a client against both halves', 'fixed'],
-  ['<code>notifications.py</code> was 513 lines doing three jobs',
+  ['<code>notify/notifications.py</code> was 513 lines doing three jobs',
    'What is said, how it is laid out, and when the sweep runs. Split into three modules — and that also settled a coupling: <code>coffee_notifications</code> imported six underscore-prefixed helpers from it, load-bearing while the underscore said do not depend on this. They were never private in spirit, only in name.',
    'An audit pass', 'fixed']
 ];
@@ -653,7 +672,7 @@ function drawCoffee() {
 
 function drawSecurity() {
   el('keySample').textContent = [
-    "SECRET_KEY is still the development placeholder committed in config.py.",
+    "SECRET_KEY is still the development placeholder committed in core/config.py.",
     "It signs every session token and it is public.",
     "",
     "  DEBUG on   ->  a warning, and it runs. Zero setup locally.",
@@ -696,7 +715,7 @@ el('tableBtn').addEventListener('click', function () {
 });
 
 el('footNote').textContent =
-  'Figures measured on 12 September 2026 in the repository with pytest ' +
+  'Figures measured on 23 September 2026 in the repository with pytest ' +
   '--cov, wc -l and pytest --collect-only, and checked against a fresh ' +
   'measurement by tests/test_published_figures.py, because a page like this ' +
   'goes stale the moment a test is added. Everything here is read from one ' +

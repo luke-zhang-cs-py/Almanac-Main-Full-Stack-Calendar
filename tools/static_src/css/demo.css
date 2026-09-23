@@ -1,0 +1,147 @@
+/* The slot-engine demo's own styles.
+ *
+ * Everything structural -- the surface, the type, the cards, the departure
+ * board, the slot chips, the buttons, the fields -- comes from
+ * static/css/style.css, copied here by tools/build_static.py from the file
+ * the Flask app serves. This file only adds what a page that does not exist
+ * in the Flask app needs: the banner, a two-column layout, and a handful of
+ * read-only rows.
+ *
+ * style.css opens with an @import of three Google fonts. Over https that
+ * works; over file:// it quietly fails and the page falls back to the system
+ * stack named beside each one, which is why --font-body ends in
+ * system-ui, sans-serif. The layout does not depend on the webfonts loading.
+ */
+
+.demo-body { padding-bottom: 3rem; }
+
+.demo-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.9rem;
+  padding: 1.5rem 2.5rem 0;
+  flex-wrap: wrap;
+}
+.demo-head .brand.sub { margin: 0; }
+
+.demo-banner {
+  margin: 1.25rem 2.5rem 0;
+  padding: 1.1rem 1.35rem;
+  border: 1px solid rgba(217, 164, 65, 0.42);
+  border-left: 3px solid var(--brass);
+  border-radius: var(--radius-m);
+  background: rgba(217, 164, 65, 0.07);
+  max-width: 1100px;
+}
+.demo-banner p {
+  margin: 0 0 0.7rem;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--parchment-dim);
+}
+.demo-banner p:last-child { margin-bottom: 0; }
+.demo-banner b { color: var(--parchment); }
+.demo-provenance { font-size: 0.83rem !important; color: var(--muted) !important; }
+.demo-banner code, .demo-note code, .demo-foot code {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  color: var(--teal-strong);
+}
+
+.demo-main { max-width: 1100px; padding-top: 1.5rem; }
+
+.demo-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .demo-columns { grid-template-columns: minmax(0, 1fr); }
+  .demo-head, .demo-banner { margin-left: 1rem; margin-right: 1rem; padding-left: 1rem; }
+  .demo-main { padding: 1.5rem 1rem 0; }
+}
+
+.demo-output .board { margin-bottom: 1.25rem; }
+
+.demo-note {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  margin: 0 0 1rem;
+}
+
+.demo-add { margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--border); }
+.demo-add .field input[type="number"] { width: 5.5rem; }
+.demo-add .field input[type="text"] { width: 5.5rem; }
+
+/* A row of the three tables, read back. Deliberately plain: these are rows,
+ * not controls, and the only thing you can do to one is take it away. */
+.demo-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+.demo-row:last-child { border-bottom: none; }
+.demo-row .when {
+  font-family: var(--font-mono);
+  color: var(--parchment-dim);
+  font-size: 0.82rem;
+}
+.demo-row .label { color: var(--muted); font-size: 0.78rem; }
+.demo-row .spacer { flex: 1; }
+.demo-drop {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  font-size: 0.72rem;
+  padding: 0.15rem 0.45rem;
+  line-height: 1.4;
+}
+.demo-drop:hover { border-color: var(--clay); color: var(--clay-strong); }
+
+.demo-empty { color: var(--muted); font-size: 0.82rem; padding: 0.5rem 0; }
+
+/* The slot chips on this page are not buttons: there is nothing to book. */
+.demo-output .slot-chip { cursor: default; }
+.demo-output .slot-chip:hover { background: var(--panel-alt); color: var(--parchment-dim); }
+.demo-output .slot-chip:active { transform: none; }
+
+.demo-trace ul { margin: 0; padding-left: 1.1rem; }
+.demo-trace li {
+  color: var(--muted);
+  font-size: 0.83rem;
+  line-height: 1.7;
+}
+.demo-trace li b { color: var(--parchment-dim); font-family: var(--font-mono); font-weight: 500; }
+
+.demo-answer {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  margin: 0.9rem 0 0;
+  color: var(--parchment-dim);
+}
+.demo-answer.yes { color: var(--teal-strong); }
+.demo-answer.no { color: var(--clay-strong); }
+
+.demo-problem {
+  margin-top: 0.9rem;
+  font-size: 0.82rem;
+  color: var(--clay-strong);
+  font-family: var(--font-mono);
+}
+
+.demo-foot {
+  margin-top: 2rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+.demo-foot p { margin: 0; }

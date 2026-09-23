@@ -17,7 +17,7 @@ def test_the_log_lists_what_was_sent(client, admin, booking):
 
 
 def test_the_log_can_be_filtered_by_status(client, admin, booking):
-    import mailer
+    from notify import mailer
     assert mailer.wait_until_idle(5.0)
     body = client.get("/api/admin/emails?status=sent", headers=admin["auth"]).get_json()
     assert body["emails"] and all(e["status"] == "sent" for e in body["emails"])

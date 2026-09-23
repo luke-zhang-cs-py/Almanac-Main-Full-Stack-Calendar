@@ -7,8 +7,8 @@ dash turning every development email into a delivery failure.
 
 import pytest
 
-import config
-import mailer
+from core import config
+from notify import mailer
 
 
 # ------------------------------------------------------------- SECRET_KEY
@@ -31,7 +31,7 @@ def test_a_real_key_passes():
 
 def test_debug_warns_and_carries_on():
     """Zero-setup local development is the point of every default in
-    config.py, so the placeholder has to stay usable while DEBUG is on."""
+    core/config.py, so the placeholder has to stay usable while DEBUG is on."""
     assert config.check_secret_key(config.DEV_SECRET_KEY, debug=True)
 
 
@@ -154,7 +154,7 @@ def test_the_failure_is_real_without_the_guard():
 def test_a_failed_send_is_recorded_and_retryable(ctx, monkeypatch):
     """A mail server outage must not permanently swallow a reminder: the
     claim is handed back on the next attempt rather than counting as sent."""
-    import database as db
+    from core import database as db
 
     def explode(_message):
         raise OSError("smtp is down")

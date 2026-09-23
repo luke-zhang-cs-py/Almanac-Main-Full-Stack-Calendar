@@ -21,12 +21,12 @@ import jwt
 from flask import Flask, Response, g, jsonify, request
 from werkzeug.security import check_password_hash, generate_password_hash
 
-import config
+from core import config
 
 # ----------------------------------------------------------------------
 # Config — edit these three lines for your setup
 # ----------------------------------------------------------------------
-# Same placeholder config.py uses, imported rather than re-typed, so
+# Same placeholder core/config.py uses, imported rather than re-typed, so
 # check_secret_key() below (also imported, not re-implemented) recognizes it.
 SECRET_KEY = os.environ.get("SECRET_KEY", config.DEV_SECRET_KEY)
 JWT_EXP_HOURS = 24
@@ -81,13 +81,13 @@ def init_db():
 # ----------------------------------------------------------------------
 def create_token(user):
     # Aware rather than utcnow(): that call is deprecated and scheduled for
-    # removal. Same change as auth.py -- this file is a standalone copy, and
+    # removal. Same change as accounts/auth.py -- this file is a standalone
     # the last thing it missed was the "sub" fix directly below.
     now = datetime.datetime.now(datetime.timezone.utc)
     payload = {
         # RFC 7519 says "sub" is a string and PyJWT >= 2.10 enforces it on
         # decode, so an int here encodes fine and then fails every login with
-        # InvalidSubjectError. auth.py carries the same fix; this file is a
+        # InvalidSubjectError. accounts/auth.py carries the same fix; this is
         # standalone copy and did not get it until it was audited.
         "sub": str(user["id"]),
         "role": user["role"],

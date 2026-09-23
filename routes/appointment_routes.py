@@ -2,11 +2,11 @@ import sqlite3
 
 from flask import Blueprint, g, jsonify, request
 
-import database as db
-import notifications
-from auth import roles_required, token_required
+from core import database as db
+from notify import notifications
+from accounts.auth import roles_required, token_required
 from routes import camel_keys
-from calendar_logic import is_slot_free
+from domain.calendar_logic import is_slot_free
 
 bp = Blueprint("appointment_routes", __name__, url_prefix="/api/appointments")
 

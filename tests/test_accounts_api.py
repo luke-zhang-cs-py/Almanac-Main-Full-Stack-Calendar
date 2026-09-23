@@ -88,7 +88,7 @@ def test_bad_credentials_are_401_and_say_nothing_useful(client, body):
 def test_a_deactivated_account_cannot_log_in(client, admin):
     from tests.conftest import register
     register(client, "gone@test.local")
-    import database as db
+    from core import database as db
     db.execute("UPDATE users SET is_active = 0 WHERE email = ?", ("gone@test.local",))
     res = client.post("/api/auth/login",
                       json={"email": "gone@test.local", "password": "pw12345678"})
@@ -99,7 +99,7 @@ def test_a_live_token_stops_working_once_the_account_is_off(client):
     """Deactivation has to bite immediately, not when the token expires --
     which is why token_required reloads the user on every request."""
     from tests.conftest import register
-    import database as db
+    from core import database as db
     token, user = register(client, "revoked@test.local")
     auth = {"Authorization": f"Bearer {token}"}
     assert client.get("/api/auth/me", headers=auth).status_code == 200
@@ -114,7 +114,7 @@ def test_me_needs_a_token(client):
 # ------------------------------------------------------------------- admin
 
 def test_the_provider_directory_lists_only_active_providers(client, provider, booking):
-    import database as db
+    from core import database as db
     body = client.get("/api/providers", headers=booking["auth"]).get_json()
     assert [p["name"] for p in body["providers"]] == ["Test Provider"]
 

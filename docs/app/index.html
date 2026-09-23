@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Almanac — the slot engine, in your browser</title>
+<meta name="description" content="The free-slot engine from Almanac, running standalone: recurring weekly hours, minus one-off blocks, minus existing bookings, tiled into bookable slots. No account, no database, nothing saved.">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/demo.css">
+</head>
+<body class="demo-body">
+
+<header class="demo-head">
+  <div class="brand"><span class="mark">Almanac</span></div>
+  <span class="brand sub">the slot engine · browser build</span>
+</header>
+
+<!-- The banner the Flask app does not have, because the Flask app does not
+     need it. Said before anything else on the page, because somebody who
+     reads this as "Almanac, online" will be wrong about every important
+     thing on it. -->
+<div class="demo-banner" id="demoBanner">
+  <p>
+    <b>This is the slot engine only — not the booking platform.</b>
+    Almanac is JWT sign-in over a relational database, transactional email and
+    a background reminder thread, and none of that can run in a browser tab.
+    What <i>can</i> is the part that is pure computation: turning a provider's
+    recurring weekly hours, their one-off blocks and their existing bookings
+    into the list of slots a guest may actually book. That is what this page
+    is, and it is all it is.
+  </p>
+  <p>
+    <b>There is no account, no database, and nothing is saved.</b> Every row
+    you add below lives in this tab and is gone when you close or reload it.
+    Nothing is uploaded and no request leaves the page. You cannot book any of
+    the slots it shows you — there is nobody to book them with.
+  </p>
+  <p class="demo-provenance">
+    <code>js/slots.js</code> is a port of <code>domain/calendar_logic.py</code>,
+    and <code>tools/build_static.py</code> runs the two against each other in a
+    real browser over a matrix of scenarios before publishing this page. It
+    refuses to write a single file if they disagree about one slot.
+    <a href="https://github.com/luke-zhang-cs-py/Almanac-Main-Full-Stack-Calendar">Source, and the Flask app the engine belongs to &rarr;</a>
+  </p>
+</div>
+
+<main class="main demo-main">
+
+  <div class="demo-columns">
+
+    <!-- ------------------------------------------------ the rows, left -->
+    <section class="demo-inputs">
+      <h2>What the provider has set</h2>
+      <p class="lede">The three tables the engine reads. Change any of them and
+        the board on the right recomputes.</p>
+
+      <div class="card">
+        <h3>Start from</h3>
+        <div class="field">
+          <label for="preset">A worked example</label>
+          <select id="preset"></select>
+        </div>
+        <p class="demo-note" id="presetNote"></p>
+      </div>
+
+      <div class="card">
+        <h3>Weekly opening hours</h3>
+        <p class="demo-note">Recurring, by weekday. A window is a start, an end
+          and the length of one slot; a day may have several, and a day with
+          none is simply not open.</p>
+        <div id="weekRows"></div>
+        <form class="inline-form demo-add" id="addWindow">
+          <div class="field">
+            <label for="windowDay">Day</label>
+            <select id="windowDay"></select>
+          </div>
+          <div class="field">
+            <label for="windowStart">From</label>
+            <input type="text" id="windowStart" value="09:00" size="5">
+          </div>
+          <div class="field">
+            <label for="windowEnd">To</label>
+            <input type="text" id="windowEnd" value="17:00" size="5">
+          </div>
+          <div class="field">
+            <label for="windowSlot">Slot</label>
+            <input type="number" id="windowSlot" value="30" min="1" step="1">
+          </div>
+          <button type="submit" class="btn btn-teal">Add hours</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h3>One-off blocks</h3>
+        <p class="demo-note">Time taken out of a single date. Leave both times
+          empty for a whole day off — that is what a null pair means in the
+          <code>blocked_slots</code> table, and the engine reads it that way.</p>
+        <div id="blockRows"></div>
+        <form class="inline-form demo-add" id="addBlock">
+          <div class="field">
+            <label for="blockDate">Date</label>
+            <input type="date" id="blockDate">
+          </div>
+          <div class="field">
+            <label for="blockStart">From</label>
+            <input type="text" id="blockStart" placeholder="whole day" size="5">
+          </div>
+          <div class="field">
+            <label for="blockEnd">To</label>
+            <input type="text" id="blockEnd" placeholder="open end" size="5">
+          </div>
+          <button type="submit" class="btn btn-teal">Add block</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h3>Existing bookings</h3>
+        <p class="demo-note">The engine's filter is
+          <code>status = 'confirmed'</code>, so only a confirmed appointment
+          is busy. Cancelling one frees its slot again, which is the whole
+          point of cancelling it; a completed one frees it too, which is
+          almost always moot because a completed appointment is in the
+          past.</p>
+        <div id="bookingRows"></div>
+        <form class="inline-form demo-add" id="addBooking">
+          <div class="field">
+            <label for="bookingDate">Date</label>
+            <input type="date" id="bookingDate">
+          </div>
+          <div class="field">
+            <label for="bookingStart">From</label>
+            <input type="text" id="bookingStart" value="11:00" size="5">
+          </div>
+          <div class="field">
+            <label for="bookingEnd">To</label>
+            <input type="text" id="bookingEnd" value="12:00" size="5">
+          </div>
+          <div class="field">
+            <label for="bookingStatus">Status</label>
+            <select id="bookingStatus">
+              <option value="confirmed">confirmed</option>
+              <option value="cancelled">cancelled</option>
+              <option value="completed">completed</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-teal">Add booking</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- --------------------------------------------- the answer, right -->
+    <section class="demo-output">
+      <h2>What a guest may book</h2>
+      <p class="lede">Computed here, in this tab, by the same rules the Flask
+        app applies.</p>
+
+      <div class="card">
+        <h3>The question</h3>
+        <form class="inline-form" id="askForm" onsubmit="return false;">
+          <div class="field">
+            <label for="askDate">Date</label>
+            <input type="date" id="askDate">
+          </div>
+          <div class="field">
+            <label for="askDuration">Session length</label>
+            <select id="askDuration">
+              <option value="0">one slot, whatever it is</option>
+              <option value="15">15 minutes</option>
+              <option value="30">30 minutes</option>
+              <option value="45">45 minutes</option>
+              <option value="60">60 minutes</option>
+              <option value="90">90 minutes</option>
+              <option value="120">2 hours</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="askNow">Pretend it is now</label>
+            <input type="datetime-local" id="askNow">
+          </div>
+        </form>
+        <p class="demo-note">The clock is a control because it is part of the
+          answer: a date in the past offers nothing at all, and today offers
+          only what has not started yet. A slot beginning this very minute is
+          already gone — by the time anyone confirmed it, it would have begun.</p>
+      </div>
+
+      <div class="board">
+        <div class="board-head">
+          <span id="boardDay">—</span>
+          <span id="boardCount">—</span>
+        </div>
+        <div class="board-grid" id="boardGrid"></div>
+        <div class="board-empty hidden" id="boardEmpty"></div>
+      </div>
+
+      <div class="card demo-trace">
+        <h3>How it got there</h3>
+        <ul id="traceList"></ul>
+      </div>
+
+      <div class="card">
+        <h3>Is a particular span bookable?</h3>
+        <p class="demo-note"><code>is_slot_free</code> walks consecutive free
+          slots rather than matching one exactly, which is why a provider on a
+          30-minute grid can still take a 60-minute booking.</p>
+        <form class="inline-form" id="probeForm">
+          <div class="field">
+            <label for="probeStart">From</label>
+            <input type="text" id="probeStart" value="09:00" size="5">
+          </div>
+          <div class="field">
+            <label for="probeEnd">To</label>
+            <input type="text" id="probeEnd" value="10:00" size="5">
+          </div>
+          <button type="submit" class="btn btn-ghost">Ask</button>
+        </form>
+        <p id="probeAnswer" class="demo-answer">—</p>
+      </div>
+    </section>
+  </div>
+
+  <footer class="demo-foot">
+    <p>
+      Nothing here is stored. Reload and it is the worked example again.
+      The engine is <code>domain/calendar_logic.py</code> in the repository;
+      this page runs <code>js/slots.js</code>, which
+      <code>tools/build_static.py</code> proved equal to it before publishing.
+    </p>
+  </footer>
+</main>
+
+<script src="js/slots.js"></script>
+<script src="js/scenarios.js"></script>
+<script src="js/demo.js"></script>
+</body>
+</html>

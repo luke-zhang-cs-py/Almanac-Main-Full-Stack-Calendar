@@ -1,6 +1,6 @@
 """
-schedule.py
-------------
+domain/schedule.py
+-------------------
 A personal timetable, imported from the standalone planner.
 
 The planner is one HTML file opened from disk. It can show a notification
@@ -49,7 +49,7 @@ already exists. So this table carries its own mark.
 import datetime as dt
 import logging
 
-import database as db
+from core import database as db
 
 log = logging.getLogger(__name__)
 

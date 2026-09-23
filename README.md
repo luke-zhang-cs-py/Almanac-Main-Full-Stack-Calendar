@@ -4,290 +4,115 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.12-blue.svg)](https://www.python.org/)
 
-**[Read the overview →](https://luke-zhang-cs-py.github.io/Almanac-Main-Full-Stack-Calendar/)**
-(or open [`docs/index.html`](docs/index.html) directly if the live page
-won't load — it's the same file GitHub Pages serves)
+Booking, from both directions: clients book a provider's free slots, and
+providers can email someone an invite that turns into a booking without the
+guest ever making an account.
+
+### ▶ [Try the slot engine →](https://luke-zhang-cs-py.github.io/Almanac-Main-Full-Stack-Calendar/app/)
+
+![Five set-ups running through the same engine: a full week of nine-to-five, a block that clips one slot, an afternoon blocked off, a day booked solid showing nothing bookable, and today with the morning already gone](docs/demo.gif)
+
+*Set weekly hours, add a block or a booking, pick a date — and the board
+recomputes in the tab. Each example shows the engine's own arithmetic: how many
+windows it read, how many slots it tiled, how many it dropped and why.*
+
+This is **the slot engine only, not the platform** — JWT auth, a relational
+database, transactional email and a background reminder thread genuinely can't
+run in a browser tab, so none of them are mimed. `js/slots.js` is a port of
+`domain/calendar_logic.py`, and `tools/build_static.py` runs the two against
+each other in a real browser over 21 scenarios before publishing, refusing to
+write a single file if they disagree about one slot.
+
+**[Read the full write-up →](https://luke-zhang-cs-py.github.io/Almanac-Main-Full-Stack-Calendar/)**
 — what a free slot has to survive, how five kinds of email get sent exactly
-once, and every bug this thing has had.
-
-A full-stack scheduling app: Flask + JWT auth on the backend, a vanilla
-HTML/CSS/JS single-page frontend served by the same app. Three roles —
-**client**, **provider**, **admin** — each get their own dashboard.
-
-## Features
-
-- **JWT authentication** — register/login, tokens signed with `HS256`,
-  password hashing via Werkzeug's `generate_password_hash`.
-- **Role-based access control** — `@token_required` + `@roles_required(...)`
-  decorators guard every sensitive endpoint.
-- **Calendar logic** (`calendar_logic.py`) — turns a provider's recurring
-  weekly hours, one-off blocked dates, and existing bookings into a live
-  list of free slots for any date; filters out past times for "today";
-  a unique DB constraint blocks race-condition double-bookings.
-- **Automatic email notifications** (`mailer.py` + `notifications.py`) — welcome,
-  booking confirmation, cancellation, completion, and a 24-hour reminder, sent
-  without anyone pressing a button. Delivery happens on a background thread so
-  a slow mail server never slows down a booking, every attempt is recorded in
-  an `email_log` table, and a unique index over that log guarantees nobody is
-  mailed the same thing twice.
-- **Coffee chats** (`coffee_chats.py` + `coffee_notifications.py`) — the
-  reverse direction: an email that *produces* a booking. Send someone an
-  invite, they click the link, they see your real availability, they pick a
-  time. **No account needed** — a coffee chat is usually first contact, and
-  asking a founder or an alum to register before they can pick a slot loses
-  most of them. Follow-ups go out automatically after three days (capped at
-  two, because a third is pestering), invites expire on their own, and a
-  booked one becomes an ordinary appointment with the usual confirmation and
-  24-hour reminder.
-- **Priced offerings** (`offerings.py`) — a provider lists several things
-  they do, each with its own length, price and description, instead of one
-  free-text `specialty`. A coffee chat invite can name one, and the session
-  takes its duration and topic from the catalogue entry so the two cannot
-  drift apart. Money is stored in minor units as an integer; `0` means free
-  and is a real answer, not a missing one.
-- **Database layer built for the cloud** — runs on local SQLite with zero
-  setup, and switches to a managed cloud Postgres database (Supabase, Neon,
-  Render, Railway, AWS RDS...) by changing one environment variable
-  (`DATABASE_URL`) — no code changes.
-
-## Project layout
-
-```
-app.py                     Flask app factory, blueprint registration
-config.py                  Reads all settings from environment variables
-database.py                DB abstraction: SQLite locally, Postgres in the cloud
-auth.py                    JWT creation/verification, RBAC decorators
-calendar_logic.py          Free-slot calculation engine
-mailer.py                  Email transport: SMTP, background queue, delivery log
-email_render.py            Message layout: one call renders text and HTML
-notifications.py           What gets mailed, on what occasion
-scheduler.py               The one background timer: reminders + coffee nudges
-coffee_chats.py            Invite lifecycle, tokens, guest booking
-coffee_notifications.py    Invite / nudge / booked / declined emails
-offerings.py               Priced session catalogue per provider
-seed_luke.py               Seeds a provider with availability + catalogue
-routes/
-  auth_routes.py           /api/auth/register, /login, /me
-  user_routes.py           /api/providers, /api/admin/users
-  availability_routes.py   provider hours + blocked dates, public slot lookup
-  appointment_routes.py    book / list / cancel / complete appointments
-  email_routes.py          admin delivery log, test send, manual reminder run
-  coffee_routes.py         invites (host, authed) + booking (guest, token)
-  offering_routes.py       catalogue CRUD (owner) + public browse
-templates/index.html       SPA shell
-templates/coffee.html      Guest booking page — no login, one decision
-docs/architecture.html     Visual overview of every component; published with the overview
-static/js/app.js           SPA views, including What I offer + Coffee chats
-static/css/style.css       Design system ("departure board" visual identity)
-static/js/api.js           Fetch wrapper (JWT storage + auth headers)
-static/js/app.js           SPA routing + role-specific dashboard rendering
-seed_data.py                Creates a starter admin account
-requirements.txt
-.env.example
-```
+once, and every bug this has had. There's also an
+[architecture map](docs/architecture.html).
 
 ## Run it locally
 
 ```bash
 pip install -r requirements.txt
 python seed_data.py        # creates admin@almanac.local / admin12345
-python app.py               # http://127.0.0.1:5003
+python app.py              # http://127.0.0.1:5003
 ```
 
-No `.env` needed to start — sensible defaults kick in (SQLite file,
-dev JWT secret). For anything beyond local testing, copy `.env.example` to
-`.env`, fill in a real `SECRET_KEY`, and load it before running.
+No `.env` needed to start — SQLite and a dev JWT secret by default. It binds
+`127.0.0.1`; set `HOST=0.0.0.0` only when you mean it. Running with
+`FLASK_DEBUG=0` and no real `SECRET_KEY` is refused outright, because the dev
+secret is committed and therefore public, and it signs every session token.
 
-The server binds to `127.0.0.1`. It used to bind `0.0.0.0`, which with
-`FLASK_DEBUG` on -- the default -- exposed the Werkzeug debugger, an
-interactive Python console, to everyone on the network. Set `HOST=0.0.0.0`
-when you actually mean it, and turn debug off when you do.
+Switching to managed Postgres (Supabase, Neon, Render, RDS) is one environment
+variable, `DATABASE_URL`. No code changes.
 
-The dev secret is committed, so it is public, and it signs every session
-token. Running with `FLASK_DEBUG=0` and no `SECRET_KEY` set therefore does
-not start at all — it raises at boot rather than serving tokens anyone could
-forge. Generate one with:
+## Project layout
+
+The root holds the things you *run*; everything you *import* lives in a package
+named for its layer. The arrows only point one way —
+`core` ← `accounts`/`domain` ← `notify` ← `routes` ← `app.py` — so an import
+pointing back up is a cycle and says so immediately.
+
+```
+app.py            Flask app factory, blueprint registration
+core/             config.py, database.py          settings; SQLite or Postgres
+accounts/         auth.py                         JWT creation, RBAC decorators
+domain/           calendar_logic.py               the free-slot engine
+                  coffee_chats.py, offerings.py,
+                  pounds.py, schedule.py          the rules: no HTTP, no email
+notify/           mailer.py, notifications.py,    transport, occasions, layout,
+                  coffee_notifications.py,        and the one background timer
+                  email_render.py, scheduler.py
+routes/           nine blueprints, one per area of the API
+docs/app/         the slot engine, ported to JS and published on its own
+tools/            build_static.py, build_planner.py, refresh_figures.py
+```
+
+`app.py` stays at the root because `Flask(__name__)` resolves `templates/` and
+`static/` relative to its own directory. `login_page.py`, `seed_data.py` and
+`seed_luke.py` stay because they're run as scripts — which puts *their*
+directory on `sys.path`, not the project's.
+
+## The parts worth knowing
+
+**A free slot has to survive a lot.** `domain/calendar_logic.py` turns
+recurring weekly hours, one-off blocks and existing bookings into bookable
+times — dropping anything that overlaps something busy *at all* (not just an
+exact match), anything already past on today's date, and anything too short for
+the requested session. A partial-unique index makes race-condition
+double-booking impossible at the database level rather than in application code.
+
+**Five kinds of email, each sent exactly once.** Welcome, confirmation,
+cancellation, completion and a 24-hour reminder, all without anyone pressing a
+button. Delivery runs on a background thread so a slow mail server never slows
+a booking; every attempt is recorded in an `email_log`; and a unique index over
+that log is what guarantees nobody is mailed the same thing twice — the
+guarantee lives in the schema, not in a code path that could be missed.
+
+**Coffee chats run the other way.** An email that *produces* a booking: send an
+invite, they click, they see real availability, they pick a time — **with no
+account**. A coffee chat is usually first contact, and asking an alum to
+register before picking a slot loses most of them. Follow-ups go out after
+three days, capped at two, because a third is pestering.
+
+**Money is an integer in minor units,** and `0` means free — a real answer, not
+a missing one.
+
+## Tests
 
 ```bash
-python -c "import secrets; print(secrets.token_urlsafe(48))"
+pytest -q
 ```
 
-Sign up as a **client** or **provider** from the UI, or sign in as the
-seeded admin. A provider needs to add weekly hours under **My schedule**
-before clients can book them.
+503 tests, 100% of 1,952 statements. 14 of those guard the published slot-engine
+demo: every copied file byte-identical to its source, no `fetch()` anywhere so
+`file://` keeps working, and every clause of the "this is not the platform"
+banner still present.
 
-For a map of the whole system — every file, the email pipeline, the schema,
-the API surface — it is published alongside the overview at
-[/architecture.html](https://luke-zhang-cs-py.github.io/Almanac-Main-Full-Stack-Calendar/architecture.html),
-or open `docs/architecture.html` locally.
-
-## Moving to a cloud database
-
-1. Provision a Postgres database (Supabase, Neon, Railway, Render, or
-   AWS RDS all work).
-2. `pip install psycopg2-binary` (already listed in `requirements.txt`).
-3. Set `DATABASE_URL=postgres://user:password@host:5432/dbname`.
-4. Run `python app.py` — `database.py` detects the `postgres://` prefix
-   and switches backends automatically; tables are created on first boot.
-
-Deploying to a host like Render/Railway/Fly.io: set `SECRET_KEY`,
-`DATABASE_URL`, and `PORT` as environment variables in the platform's
-dashboard, then point it at `python app.py` (or run under `gunicorn app:app`
-for production instead of Flask's dev server).
-
-## API summary
-
-| Method | Path                                    | Who            |
-|--------|------------------------------------------|----------------|
-| POST   | `/api/auth/register`                     | anyone         |
-| POST   | `/api/auth/login`                        | anyone         |
-| GET    | `/api/auth/me`                           | any logged-in  |
-| GET    | `/api/providers`                         | any logged-in  |
-| GET    | `/api/providers/<id>/slots?date=YYYY-MM-DD` | any logged-in |
-| GET/POST | `/api/availability/mine`               | provider       |
-| DELETE | `/api/availability/mine/<id>`            | provider       |
-| POST   | `/api/availability/mine/block`           | provider       |
-| DELETE | `/api/availability/mine/block/<id>`      | provider       |
-| POST   | `/api/appointments`                      | client         |
-| GET    | `/api/appointments/mine`                 | any logged-in (scoped by role) |
-| POST   | `/api/appointments/<id>/cancel`          | owner or admin |
-| POST   | `/api/appointments/<id>/complete`        | provider/admin |
-| GET    | `/api/admin/users`                       | admin          |
-| PATCH  | `/api/admin/users/<id>`                  | admin          |
-| GET    | `/api/admin/emails`                      | admin          |
-| POST   | `/api/admin/emails/test`                 | admin          |
-| POST   | `/api/admin/emails/run-reminders`        | admin          |
-
-All routes except `/api/auth/register` and `/api/auth/login` require
-`Authorization: Bearer <token>`.
-
-## Email notifications
-
-Five messages go out on their own, no button required:
-
-| When                                   | Who gets mailed        |
-|----------------------------------------|------------------------|
-| An account is created                  | the new user           |
-| A client books a slot                  | client **and** provider |
-| An appointment is cancelled            | client **and** provider |
-| A provider marks an appointment done   | the client             |
-| `REMINDER_HOURS_BEFORE` the start time | client **and** provider |
-
-**Locally there is nothing to configure.** With `SMTP_HOST` unset, each message
-is printed to the terminal running `python app.py` — you can book an
-appointment and watch the confirmation appear. Set `SMTP_HOST`, `SMTP_USERNAME`,
-and `SMTP_PASSWORD` (SendGrid, Mailgun, Postmark, SES, Gmail app password…) and
-the identical messages start being delivered. No extra pip package: it's
-`smtplib` from the standard library.
-
-Every message is multipart — plain text plus a styled HTML version — and both
-halves are generated from one description of the message, so they can't drift
-apart.
-
-Signed in as an admin, **Email log** in the sidebar shows what has been sent,
-to whom, and whether it landed, with a **Send test** button for checking SMTP
-credentials and **Run reminders now** for forcing a scan.
-
-How it holds up:
-
-- **Nothing blocks on the mail server.** `mailer.send()` writes a row and hands
-  the message to a background worker thread; the booking request returns
-  immediately. A refused SMTP connection is logged as a failed row, never a 500.
-- **Nobody is mailed twice.** A unique index on
-  `email_log (appointment_id, kind, recipient)` is the source of truth, so
-  overlapping reminder scans, a double-clicked button, or several web workers
-  running at once all collapse to one message.
-- **Failures are retried.** A row left in `failed` is picked up by the next
-  reminder scan.
-
-Reminders run from a background thread every `REMINDER_SCAN_MINUTES`. If you
-prefer a real scheduler, set `REMINDERS_ENABLED=0` and point cron at
-`POST /api/admin/emails/run-reminders` instead.
-
-## Notes on production hardening
-
-This is a complete, working reference implementation, not a
-production-audited one. Before shipping it publicly, you'd want to add:
-rate limiting on `/api/auth/*`, refresh tokens (current tokens just expire
-after `JWT_EXP_HOURS`), email verification, HTTPS enforcement, and a
-migration tool (e.g. Alembic) instead of the create-if-not-exists schema
-in `database.py`. On the email side: an unsubscribe link and a per-user
-notification preference, SPF/DKIM records for whatever domain you send from,
-and — once one process is no longer enough — moving the reminder scan out of
-the app thread and into cron or a task queue.
-
-## Using it as a provider
-
-Signing in as a provider gives four views: **My schedule**, **Appointments**,
-**What I offer**, and **Coffee chats**.
-
-*What I offer* lists the catalogue with the price editable in place — it is
-the field that actually changes, and a dialog for one number is more ceremony
-than the change deserves. Hiding an offering deactivates it rather than
-deleting it, because past bookings still reference it.
-
-*Coffee chats* sends an invite (optionally for a specific priced session),
-then tracks what happened to each one: sent, viewed, booked, declined. Open
-invites can be nudged, revoked, or have their link copied — plenty of people
-would rather paste it into a message they are already writing than have the
-platform send the email.
-
-## Coffee chat flow
-
-```
-host sends invite ──► guest gets an email with a tokenised link
-                          │
-                          ├─ opens it        → invite marked "viewed"
-                          ├─ picks a slot    → real appointment + confirmations
-                          ├─ declines        → host told, nothing held
-                          └─ silence         → one nudge after 3 days, then expiry
-```
-
-| Endpoint | Who | Purpose |
-|---|---|---|
-| `POST /api/coffee/invites` | host | create and send an invite |
-| `GET /api/coffee/invites` | host | list invites + conversion stats |
-| `POST /api/coffee/invites/<id>/nudge` | host | manual follow-up |
-| `DELETE /api/coffee/invites/<id>` | host | revoke |
-| `GET /coffee/<token>` | guest | booking page, no login |
-| `GET /api/coffee/public/<token>` | guest | invite details + free slots |
-| `POST /api/coffee/public/<token>/book` | guest | take a slot |
-| `POST /api/coffee/public/<token>/decline` | guest | say no |
-
-The token is the only credential on the guest side, so the public handlers
-return the host's name and free slots and nothing else — no ids, no token
-echo, no nudge counts. A leaked link should cost one coffee chat, not read
-access to a calendar.
-
-A guest who books gets a `users` row so `appointments.client_id` has
-something real to point at, created with an unusable password hash: mailable
-and bookable, unable to log in. If they later register properly the address
-already exists and their history comes with them.
-
-## Offerings and the slot grid
-
-```bash
-python seed_luke.py            # provider + a week of hours + 14 sessions
-python seed_luke.py --list     # show the catalogue
-python seed_luke.py --reset    # rebuild the catalogue from CATALOGUE
-```
-
-| Endpoint | Who | Purpose |
-|---|---|---|
-| `GET /api/providers/<id>/offerings` | anyone | browse the catalogue, grouped |
-| `GET /api/offerings/mine` | owner | list, including deactivated |
-| `POST /api/offerings/mine` | owner | create |
-| `PATCH /api/offerings/mine/<id>` | owner | edit title, price, duration… |
-| `DELETE /api/offerings/mine/<id>` | owner | deactivate (never deletes) |
-
-**A booking must begin and end on a slot boundary, so the provider's grid
-size decides which session lengths are bookable at all.** On a 30-minute
-grid a 45-minute session has no valid start time anywhere in the day — not
-rare, impossible. `seed_luke.py` therefore sets a 15-minute grid, which
-divides every duration in the catalogue, and the guest page asks for start
-times that can hold the whole session rather than raw slots.
+The build's own check is the other half, and it's the one that can't run in CI:
+it needs a real browser. `python tools/build_static.py --prove` sabotages the
+published port twelve ways — shifting every weekday by one, treating a
+whole-day block as zero length, dropping the `provider_id` filter — and
+requires each to be caught.
 
 ## License
 
-[MIT](LICENSE) — see [CONTRIBUTING.md](CONTRIBUTING.md) for setup and test
-conventions.
+[MIT](LICENSE) — see [CONTRIBUTING.md](CONTRIBUTING.md) for setup and conventions.

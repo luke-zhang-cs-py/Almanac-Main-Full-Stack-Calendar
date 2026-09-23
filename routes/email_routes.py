@@ -2,9 +2,9 @@ import re
 
 from flask import Blueprint, current_app, g, jsonify, request
 
-import database as db
-import notifications
-from auth import roles_required, token_required
+from core import database as db
+from notify import notifications
+from accounts.auth import roles_required, token_required
 from routes import camel_keys
 
 bp = Blueprint("email_routes", __name__, url_prefix="/api/admin/emails")

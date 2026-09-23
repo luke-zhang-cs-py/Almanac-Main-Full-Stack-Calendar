@@ -21,9 +21,9 @@ higher. Edit them in CATALOGUE; nothing else depends on the numbers.
 import argparse
 import sys
 
-import database as db
-import offerings
-from auth import hash_password
+from core import database as db
+from domain import offerings
+from accounts.auth import hash_password
 
 EMAIL = "luke@almanac.local"
 PASSWORD = "coffee12345"

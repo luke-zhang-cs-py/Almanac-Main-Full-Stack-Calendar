@@ -11,11 +11,11 @@ import datetime as dt
 
 import pytest
 
-import notifications
+from notify import notifications
 
 
 def sent(kind=None, to=None):
-    import database as db
+    from core import database as db
     sql, params = "SELECT * FROM email_log WHERE 1 = 1", []
     if kind:
         sql, params = sql + " AND kind = ?", params + [kind]
@@ -25,7 +25,7 @@ def sent(kind=None, to=None):
 
 
 def clear_log():
-    import database as db
+    from core import database as db
     db.execute("DELETE FROM email_log")
 
 
@@ -110,7 +110,7 @@ def test_the_canceller_is_told_they_cancelled(ctx, booking, provider):
     notifications.notify_cancelled(booking["id"],
                                    cancelled_by={"id": provider["id"],
                                                  "name": "Test Provider"})
-    import database as db
+    from core import database as db
     provider_mail = db.query(
         "SELECT * FROM email_log WHERE kind = 'cancelled_provider'", one=True)
     client_mail = db.query(
@@ -191,7 +191,7 @@ def test_a_second_scan_reminds_nobody_twice(ctx, booking):
 
 
 def test_cancelled_appointments_are_not_reminded(ctx, booking):
-    import database as db
+    from core import database as db
     clear_log()
     db.execute("UPDATE appointments SET status = 'cancelled' WHERE id = ?", (booking["id"],))
     assert notifications.send_due_reminders(now=a_reminder_moment(booking)) == 0
@@ -265,7 +265,7 @@ def test_the_nudge_does_not_collide_with_the_day_before_reminder(ctx, booking):
 
 
 def test_a_cancelled_appointment_is_not_nudged(ctx, booking):
-    import database as db
+    from core import database as db
     clear_log()
     db.execute("UPDATE appointments SET status = 'cancelled' WHERE id = ?",
                (booking["id"],))

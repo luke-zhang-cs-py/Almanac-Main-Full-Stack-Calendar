@@ -549,22 +549,22 @@ footer.page {
 
   <div class="layer">
     <div class="rail">
-      <div class="name">Domain</div>
-      <div class="what">The actual rules: who you are, when you're free, what gets mailed.</div>
+      <div class="name">domain/ · notify/ · accounts/</div>
+      <div class="what">The actual rules: who you are (<code>accounts/</code>), when you’re free (<code>domain/</code>), what gets mailed (<code>notify/</code>). Three packages, no HTTP in any of them.</div>
       <div class="count">925 lines · 4 files</div>
     </div>
     <div class="chips">
-      <div class="chip is-new" data-tip="notifications.py" data-role="message templates, triggers, reminder scheduler" data-lines="500">
-        <div class="file">notifications.py <span class="tag new">new</span></div><div class="role">what is mailed, and when</div><div class="lines">500 lines</div>
+      <div class="chip is-new" data-tip="notify/notifications.py" data-role="message templates, triggers, reminder scheduler" data-lines="500">
+        <div class="file">notify/notifications.py <span class="tag new">new</span></div><div class="role">what is mailed, and when</div><div class="lines">500 lines</div>
       </div>
-      <div class="chip is-new" data-tip="mailer.py" data-role="SMTP/console transport, queue, delivery log" data-lines="252">
-        <div class="file">mailer.py <span class="tag new">new</span></div><div class="role">how it is delivered</div><div class="lines">252 lines</div>
+      <div class="chip is-new" data-tip="notify/mailer.py" data-role="SMTP/console transport, queue, delivery log" data-lines="252">
+        <div class="file">notify/mailer.py <span class="tag new">new</span></div><div class="role">how it is delivered</div><div class="lines">252 lines</div>
       </div>
-      <div class="chip" data-tip="calendar_logic.py" data-role="hours − blocks − bookings = free slots" data-lines="93">
-        <div class="file">calendar_logic.py</div><div class="role">free-slot engine</div><div class="lines">93 lines</div>
+      <div class="chip" data-tip="domain/calendar_logic.py" data-role="hours − blocks − bookings = free slots" data-lines="93">
+        <div class="file">domain/calendar_logic.py</div><div class="role">free-slot engine</div><div class="lines">93 lines</div>
       </div>
-      <div class="chip" data-tip="auth.py" data-role="password hashing, JWT, RBAC decorators" data-lines="80">
-        <div class="file">auth.py</div><div class="role">hashing · JWT · RBAC</div><div class="lines">80 lines</div>
+      <div class="chip" data-tip="accounts/auth.py" data-role="password hashing, JWT, RBAC decorators" data-lines="80">
+        <div class="file">accounts/auth.py</div><div class="role">hashing · JWT · RBAC</div><div class="lines">80 lines</div>
       </div>
     </div>
   </div>
@@ -573,16 +573,16 @@ footer.page {
 
   <div class="layer">
     <div class="rail">
-      <div class="name">Data &amp; config</div>
-      <div class="what">One abstraction over two databases; every setting comes from the environment.</div>
+      <div class="name">core/</div>
+      <div class="what">One abstraction over two databases; every setting comes from the environment. <code>seed_data.py</code> stays at the root with the other things you run rather than import.</div>
       <div class="count">396 lines · 3 files</div>
     </div>
     <div class="chips">
-      <div class="chip" data-tip="database.py" data-role="SQLite/Postgres abstraction + schema" data-lines="306">
-        <div class="file">database.py</div><div class="role">SQLite ⇄ Postgres · schema</div><div class="lines">306 lines</div>
+      <div class="chip" data-tip="core/database.py" data-role="SQLite/Postgres abstraction + schema" data-lines="306">
+        <div class="file">core/database.py</div><div class="role">SQLite ⇄ Postgres · schema</div><div class="lines">306 lines</div>
       </div>
-      <div class="chip" data-tip="config.py" data-role="every setting read from the environment" data-lines="58">
-        <div class="file">config.py</div><div class="role">environment settings</div><div class="lines">58 lines</div>
+      <div class="chip" data-tip="core/config.py" data-role="every setting read from the environment" data-lines="58">
+        <div class="file">core/config.py</div><div class="role">environment settings</div><div class="lines">58 lines</div>
       </div>
       <div class="chip" data-tip="seed_data.py" data-role="creates the first admin account" data-lines="32">
         <div class="file">seed_data.py</div><div class="role">first admin account</div><div class="lines">32 lines</div>
@@ -721,7 +721,7 @@ footer.page {
   <h2><span class="num">03</span>Where the code actually is</h2>
   <p class="section-lede">
     Every file, by length, grouped by layer. The email component added three modules
-    totalling 826 lines; the rest of the change was wiring — 1,289 insertions in all. (17 bars: the 18th file, <code>routes/__init__.py</code>, is an empty package marker.)
+    totalling 826 lines; the rest of the change was wiring — 1,289 insertions in all. (17 bars; the package markers are left out — <code>routes/__init__.py</code> holds only the camelCase helper, and the <code>__init__.py</code> in each of <code>core/</code>, <code>accounts/</code>, <code>domain/</code> and <code>notify/</code> is a docstring saying what the package holds and which way its imports point.)
   </p>
 
   <div class="card">
@@ -874,7 +874,7 @@ footer.page {
       <ul class="list-tight">
         <li><code>db.insert()</code> — the booking route relied on <code>lastrowid</code>, which is <code>None</code> on Postgres. Now uses <code>RETURNING id</code> there.</li>
         <li><code>db.rollback()</code> — Postgres refuses every further statement on a connection after an error, so the <code>IntegrityError</code> branches need it.</li>
-        <li><strong>JWT <code>sub</code> must be a string.</strong> PyJWT ≥ 2.10 rejects the integer, so <em>every</em> authenticated request was failing with "Invalid token" until <code>auth.py</code> encoded it as text.</li>
+        <li><strong>JWT <code>sub</code> must be a string.</strong> PyJWT ≥ 2.10 rejects the integer, so <em>every</em> authenticated request was failing with "Invalid token" until <code>accounts/auth.py</code> encoded it as text.</li>
       </ul>
     </div>
   </div>
@@ -913,15 +913,15 @@ const GROUPS = [
     ["routes/user_routes.py",         61, "provider directory + admin user management",   false],
     ["app.py",                        56, "app factory: wires every layer together",      false],
   ]},
-  { name: "Domain", files: [
-    ["notifications.py",  500, "message templates, triggers, reminder scheduler", true ],
-    ["mailer.py",         252, "SMTP/console transport, queue, delivery log",     true ],
-    ["calendar_logic.py",  93, "hours − blocks − bookings = free slots",          false],
-    ["auth.py",            80, "password hashing, JWT, RBAC decorators",          false],
+  { name: "domain/ · notify/ · accounts/", files: [
+    ["notify/notifications.py",  500, "message templates, triggers, reminder scheduler", true ],
+    ["notify/mailer.py",         252, "SMTP/console transport, queue, delivery log",     true ],
+    ["domain/calendar_logic.py",  93, "hours − blocks − bookings = free slots",          false],
+    ["accounts/auth.py",            80, "password hashing, JWT, RBAC decorators",          false],
   ]},
-  { name: "Data & config", files: [
-    ["database.py",  306, "SQLite/Postgres abstraction + schema", false],
-    ["config.py",     58, "every setting read from the environment", false],
+  { name: "core/", files: [
+    ["core/database.py",  306, "SQLite/Postgres abstraction + schema", false],
+    ["core/config.py",     58, "every setting read from the environment", false],
     ["seed_data.py",  32, "creates the first admin account", false],
   ]},
 ];

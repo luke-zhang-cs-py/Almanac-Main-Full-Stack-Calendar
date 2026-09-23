@@ -31,9 +31,9 @@ import pytest
 @pytest.fixture
 def exploding_mail(monkeypatch):
     """mailer.send raises, from wherever it is called."""
-    import coffee_notifications
-    import mailer
-    import notifications
+    from notify import coffee_notifications
+    from notify import mailer
+    from notify import notifications
 
     def boom(message):
         raise RuntimeError("the mail server fell over")
@@ -49,19 +49,19 @@ def test_a_booking_survives_the_confirmation_email_failing(
         client, provider, booking, exploding_mail):
     """The appointment is already in the database by this point. Letting the
     exception out would report a failure for something that succeeded."""
-    import notifications
+    from notify import notifications
     notifications.notify_booked(booking["id"])          # must not raise
 
 
 def test_a_cancellation_survives_its_email_failing(client, booking,
                                                    exploding_mail):
-    import notifications
+    from notify import notifications
     notifications.notify_cancelled(booking["id"])
 
 
 def test_a_completion_survives_its_email_failing(client, booking,
                                                  exploding_mail):
-    import notifications
+    from notify import notifications
     notifications.notify_completed(booking["id"])
 
 
@@ -72,8 +72,8 @@ def an_invite(client, provider, email="mail@test.local"):
 
 def test_the_four_coffee_emails_all_swallow_their_own_failures(
         client, provider, ctx, exploding_mail):
-    import coffee_chats
-    import coffee_notifications
+    from domain import coffee_chats
+    from notify import coffee_notifications
 
     invite = an_invite(client, provider, "swallow@test.local")
 
@@ -93,9 +93,9 @@ def test_the_booked_email_gives_up_quietly_if_the_appointment_is_gone(
     """The invite says it was booked but the appointment row has since been
     deleted. There is nothing to describe, so it returns rather than
     rendering an email full of blanks."""
-    import coffee_notifications
+    from notify import coffee_notifications
 
-    import database as db
+    from core import database as db
 
     invite = an_invite(client, provider, "vanished@test.local")
     # Marked booked with nothing to point at. A foreign key stops the row
@@ -112,7 +112,7 @@ def test_the_booked_email_gives_up_quietly_if_the_appointment_is_gone(
 def test_a_day_whose_slots_cannot_be_computed_is_skipped(client, provider,
                                                          ctx, monkeypatch):
     """One unusable day must not empty the whole guest page."""
-    import coffee_chats
+    from domain import coffee_chats
 
     invite = coffee_chats.get_invite(an_invite(client, provider,
                                                "skip@test.local")["id"])
@@ -202,13 +202,13 @@ class FakeConnection:
 
 @pytest.fixture
 def as_postgres(monkeypatch):
-    """Make database.py take its PostgreSQL branches, with a fake driver.
+    """Make core/database.py take its PostgreSQL branches, with a fake driver.
 
     The module decides once at import which backend it is on, so the flag is
     flipped rather than the URL changed -- and monkeypatch puts it back, so
     the rest of the suite is still on SQLite.
     """
-    import database as db
+    from core import database as db
 
     made = []
 
@@ -233,7 +233,7 @@ def as_postgres(monkeypatch):
 def test_placeholders_are_rewritten_for_postgres(as_postgres):
     """SQLite takes ?, psycopg2 takes %s. One query text is written; this is
     the only place that difference is allowed to exist."""
-    import database as db
+    from core import database as db
 
     assert db._adapt_sql("SELECT * FROM users WHERE id = ?") == \
         "SELECT * FROM users WHERE id = %s"
@@ -244,7 +244,7 @@ def test_placeholders_are_rewritten_for_postgres(as_postgres):
 def test_a_postgres_connection_is_opened_without_autocommit(as_postgres):
     """Every write in this app is meant to be inside a transaction it
     controls, so autocommit must be off."""
-    import database as db
+    from core import database as db
 
     conn = db._new_connection()
     assert conn.autocommit is False
@@ -253,7 +253,7 @@ def test_a_postgres_connection_is_opened_without_autocommit(as_postgres):
 
 def test_an_insert_asks_postgres_to_return_the_id(as_postgres):
     """lastrowid does not exist there, so the id has to be asked for."""
-    import database as db
+    from core import database as db
 
     conn = FakeConnection()
     new_id = db.insert("INSERT INTO users (name) VALUES (?)", ("Ada",),
@@ -265,7 +265,7 @@ def test_an_insert_asks_postgres_to_return_the_id(as_postgres):
 
 
 def test_a_script_runs_as_one_statement_on_postgres(as_postgres):
-    import database as db
+    from core import database as db
 
     conn = FakeConnection()
     db.executescript("CREATE TABLE a (id INT); CREATE TABLE b (id INT);",
@@ -277,7 +277,7 @@ def test_a_script_runs_as_one_statement_on_postgres(as_postgres):
 def test_the_script_helper_closes_what_it_opened(as_postgres):
     """standalone_connection() is what seed scripts use outside a Flask
     app context. A leaked connection there holds a transaction open."""
-    import database as db
+    from core import database as db
 
     with db.standalone_connection() as conn:
         assert conn.closed is False
@@ -293,9 +293,9 @@ def test_the_host_email_gives_up_if_the_appointment_row_is_gone(
     this line is written for -- a dangling id -- therefore has to be made
     with the key relaxed for one statement.
     """
-    import coffee_chats
-    import coffee_notifications
-    import database as db
+    from domain import coffee_chats
+    from notify import coffee_notifications
+    from core import database as db
 
     invite = an_invite(client, provider, "dangling@test.local")
     slots = coffee_chats.available_slots(coffee_chats.get_invite(invite["id"]))
@@ -365,7 +365,7 @@ def test_a_postgres_integrity_error_is_caught_too(monkeypatch):
     monkeypatch.setitem(sys.modules, "psycopg2", fake)
     monkeypatch.setitem(sys.modules, "psycopg2.extras", extras)
 
-    import mailer
+    from notify import mailer
     from routes import appointment_routes
 
     for module in (mailer, appointment_routes):

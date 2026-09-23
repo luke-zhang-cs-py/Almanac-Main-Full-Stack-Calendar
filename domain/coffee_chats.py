@@ -1,6 +1,6 @@
 """
-coffee_chats.py
-----------------
+domain/coffee_chats.py
+-----------------------
 Turning an email into a booking.
 
 The rest of Almanac emails people *about* bookings. This is the other
@@ -39,8 +39,8 @@ import secrets
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 
-import database as db
-from calendar_logic import is_slot_free, slot_starts_for
+from core import database as db
+from domain.calendar_logic import is_slot_free, slot_starts_for
 
 log = logging.getLogger(__name__)
 
@@ -169,7 +169,7 @@ def _apply_offering(request, host_id):
                 f"{', '.join(str(d) for d in ALLOWED_DURATIONS)} minutes.")
         return request.duration_min, request.topic
 
-    import offerings as offerings_mod
+    from domain import offerings as offerings_mod
     offering = offerings_mod.get(request.offering_id)
     if not offering or offering["provider_id"] != host_id:
         raise InviteError("That offering does not belong to you.")

@@ -7,7 +7,7 @@ for a specific calendar date.
 import datetime as dt
 import logging
 
-import database as db
+from core import database as db
 
 log = logging.getLogger(__name__)
 

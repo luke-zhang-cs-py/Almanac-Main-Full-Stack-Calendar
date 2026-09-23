@@ -13,7 +13,7 @@ def a_weekday():
 # ---------------------------------------------------------------- creating
 
 def test_create_and_fetch(ctx, provider):
-    import coffee_chats as cc
+    from domain import coffee_chats as cc
     inv = cc.create_invite(provider["id"],
                            cc.InviteRequest("guest@test.local", guest_name="Guest"))
     assert inv["status"] == "sent"
@@ -21,21 +21,21 @@ def test_create_and_fetch(ctx, provider):
 
 
 def test_email_is_normalised(ctx, provider):
-    import coffee_chats as cc
+    from domain import coffee_chats as cc
     inv = cc.create_invite(provider["id"], cc.InviteRequest("  MiXeD@Test.Local  "))
     assert inv["guest_email"] == "mixed@test.local"
 
 
 @pytest.mark.parametrize("bad", ["", "   ", "nope", "@nope.com", "nope@"])
 def test_bad_email_is_refused(ctx, provider, bad):
-    import coffee_chats as cc
+    from domain import coffee_chats as cc
     with pytest.raises(cc.InviteError):
         cc.create_invite(provider["id"], cc.InviteRequest(bad))
 
 
 def test_tokens_are_unique_and_long(ctx, provider):
     """The token is the only credential on the guest side."""
-    import coffee_chats as cc
+    from domain import coffee_chats as cc
     tokens = {cc.create_invite(provider["id"], cc.InviteRequest(f"g{i}@test.local"))["token"]
               for i in range(5)}
     assert len(tokens) == 5
@@ -44,21 +44,21 @@ def test_tokens_are_unique_and_long(ctx, provider):
 
 def test_a_second_open_invite_to_the_same_person_is_refused(ctx, provider):
     """Almost always a double-send, and two links fragments the thread."""
-    import coffee_chats as cc
+    from domain import coffee_chats as cc
     cc.create_invite(provider["id"], cc.InviteRequest("dup@test.local"))
     with pytest.raises(cc.InviteError):
         cc.create_invite(provider["id"], cc.InviteRequest("dup@test.local"))
 
 
 def test_a_new_invite_is_allowed_once_the_old_one_closed(ctx, provider):
-    import coffee_chats as cc
+    from domain import coffee_chats as cc
     first = cc.create_invite(provider["id"], cc.InviteRequest("again@test.local"))
     cc.revoke(first["id"], provider["id"])
     assert cc.create_invite(provider["id"], cc.InviteRequest("again@test.local"))
 
 
 def test_an_offering_sets_the_duration_and_topic(ctx, provider, offering):
-    import coffee_chats as cc
+    from domain import coffee_chats as cc
     inv = cc.create_invite(provider["id"],
                            cc.InviteRequest("off@test.local", offering_id=offering["id"]))
     assert inv["duration_min"] == offering["durationMin"]
@@ -66,7 +66,7 @@ def test_an_offering_sets_the_duration_and_topic(ctx, provider, offering):
 
 
 def test_cannot_use_another_providers_offering(ctx, provider, offering, client):
-    import coffee_chats as cc
+    from domain import coffee_chats as cc
     from tests.conftest import register
     _, other = register(client, "thief@test.local", role="provider")
     with pytest.raises(cc.InviteError):
@@ -76,7 +76,7 @@ def test_cannot_use_another_providers_offering(ctx, provider, offering, client):
 # ------------------------------------------------------------------- state
 
 def test_viewing_is_recorded_once(ctx, provider):
-    import coffee_chats as cc
+    from domain import coffee_chats as cc
     inv = cc.create_invite(provider["id"], cc.InviteRequest("v@test.local"))
     seen = cc.mark_viewed(inv)
     assert seen["status"] == "viewed" and seen["viewed_at"]
@@ -85,8 +85,8 @@ def test_viewing_is_recorded_once(ctx, provider):
 
 
 def test_expired_invites_are_closed_and_not_open(ctx, provider):
-    import coffee_chats as cc
-    import database as db
+    from domain import coffee_chats as cc
+    from core import database as db
     inv = cc.create_invite(provider["id"], cc.InviteRequest("old@test.local"))
     db.execute("UPDATE coffee_invites SET expires_at = ? WHERE id = ?",
                ("2020-01-01T00:00:00", inv["id"]))
@@ -96,8 +96,8 @@ def test_expired_invites_are_closed_and_not_open(ctx, provider):
 
 
 def test_revoke_refuses_a_booked_invite(ctx, provider):
-    import coffee_chats as cc
-    import database as db
+    from domain import coffee_chats as cc
+    from core import database as db
     inv = cc.create_invite(provider["id"], cc.InviteRequest("booked@test.local"))
     db.execute("UPDATE coffee_invites SET status = 'booked' WHERE id = ?", (inv["id"],))
     with pytest.raises(cc.InviteError):
@@ -105,7 +105,7 @@ def test_revoke_refuses_a_booked_invite(ctx, provider):
 
 
 def test_revoke_refuses_someone_elses_invite(ctx, provider, client):
-    import coffee_chats as cc
+    from domain import coffee_chats as cc
     from tests.conftest import register
     _, other = register(client, "nosy@test.local", role="provider")
     inv = cc.create_invite(provider["id"], cc.InviteRequest("mine@test.local"))
@@ -116,14 +116,14 @@ def test_revoke_refuses_someone_elses_invite(ctx, provider, client):
 # ------------------------------------------------------------------ nudges
 
 def test_a_fresh_invite_is_not_due_for_a_nudge(ctx, provider):
-    import coffee_chats as cc
+    from domain import coffee_chats as cc
     cc.create_invite(provider["id"], cc.InviteRequest("fresh@test.local"))
     assert cc.due_for_nudge() == []
 
 
 def test_a_quiet_invite_becomes_due(ctx, provider):
-    import coffee_chats as cc
-    import database as db
+    from domain import coffee_chats as cc
+    from core import database as db
     inv = cc.create_invite(provider["id"], cc.InviteRequest("quiet@test.local"))
     old = (datetime.datetime.now()
            - datetime.timedelta(days=cc.NUDGE_AFTER_DAYS + 1)).strftime("%Y-%m-%dT%H:%M:%S")
@@ -134,8 +134,8 @@ def test_a_quiet_invite_becomes_due(ctx, provider):
 def test_nudging_resets_the_clock_and_caps_out(ctx, provider):
     """Measured from last contact, so a nudged invite waits the full interval
     again rather than being chased daily -- and stops at MAX_NUDGES."""
-    import coffee_chats as cc
-    import database as db
+    from domain import coffee_chats as cc
+    from core import database as db
     inv = cc.create_invite(provider["id"], cc.InviteRequest("capped@test.local"))
     old = (datetime.datetime.now()
            - datetime.timedelta(days=cc.NUDGE_AFTER_DAYS + 1)).strftime("%Y-%m-%dT%H:%M:%S")
@@ -152,8 +152,8 @@ def test_nudging_resets_the_clock_and_caps_out(ctx, provider):
 
 
 def test_an_expired_invite_is_never_nudged(ctx, provider):
-    import coffee_chats as cc
-    import database as db
+    from domain import coffee_chats as cc
+    from core import database as db
     inv = cc.create_invite(provider["id"], cc.InviteRequest("gone@test.local"))
     old = (datetime.datetime.now() - datetime.timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%S")
     db.execute("UPDATE coffee_invites SET created_at = ?, expires_at = ? WHERE id = ?",
@@ -164,9 +164,9 @@ def test_an_expired_invite_is_never_nudged(ctx, provider):
 # ----------------------------------------------------------------- booking
 
 def test_booking_creates_a_real_appointment_and_a_guest(ctx, provider, offering):
-    import coffee_chats as cc
-    import database as db
-    from calendar_logic import slot_starts_for
+    from domain import coffee_chats as cc
+    from core import database as db
+    from domain.calendar_logic import slot_starts_for
 
     inv = cc.create_invite(provider["id"],
                            cc.InviteRequest("newcomer@test.local",
@@ -189,9 +189,9 @@ def test_booking_creates_a_real_appointment_and_a_guest(ctx, provider, offering)
 
 
 def test_an_existing_user_is_reused_not_duplicated(ctx, provider, client):
-    import coffee_chats as cc
-    import database as db
-    from calendar_logic import slot_starts_for
+    from domain import coffee_chats as cc
+    from core import database as db
+    from domain.calendar_logic import slot_starts_for
     from tests.conftest import register
 
     register(client, "already@test.local")
@@ -205,8 +205,8 @@ def test_an_existing_user_is_reused_not_duplicated(ctx, provider, client):
 
 
 def test_a_token_books_only_once(ctx, provider):
-    import coffee_chats as cc
-    from calendar_logic import slot_starts_for
+    from domain import coffee_chats as cc
+    from domain.calendar_logic import slot_starts_for
     inv = cc.create_invite(provider["id"], cc.InviteRequest("once@test.local"))
     day = a_weekday()
     starts = slot_starts_for(provider["id"], day, inv["duration_min"])
@@ -216,8 +216,8 @@ def test_a_token_books_only_once(ctx, provider):
 
 
 def test_booking_a_taken_slot_fails(ctx, provider):
-    import coffee_chats as cc
-    from calendar_logic import slot_starts_for
+    from domain import coffee_chats as cc
+    from domain.calendar_logic import slot_starts_for
     day = a_weekday()
     first = cc.create_invite(provider["id"], cc.InviteRequest("a@test.local"))
     start = slot_starts_for(provider["id"], day, first["duration_min"])[0]["start"]
@@ -229,7 +229,7 @@ def test_booking_a_taken_slot_fails(ctx, provider):
 
 
 def test_booking_in_the_past_fails(ctx, provider):
-    import coffee_chats as cc
+    from domain import coffee_chats as cc
     inv = cc.create_invite(provider["id"], cc.InviteRequest("past@test.local"))
     yesterday = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
     with pytest.raises(cc.InviteError, match="past"):
@@ -240,20 +240,20 @@ def test_booking_in_the_past_fails(ctx, provider):
     ("not-a-date", "10:00"), ("2026-01-01", "nope"), (None, None),
 ])
 def test_malformed_date_or_time_fails(ctx, provider, date_str, time_str):
-    import coffee_chats as cc
+    from domain import coffee_chats as cc
     inv = cc.create_invite(provider["id"], cc.InviteRequest("bad@test.local"))
     with pytest.raises(cc.InviteError):
         cc.book(inv["token"], date_str, time_str)
 
 
 def test_an_unknown_token_fails(ctx, provider):
-    import coffee_chats as cc
+    from domain import coffee_chats as cc
     with pytest.raises(cc.InviteError):
         cc.book("not-a-real-token", a_weekday(), "10:00")
 
 
 def test_decline_closes_it(ctx, provider):
-    import coffee_chats as cc
+    from domain import coffee_chats as cc
     inv = cc.create_invite(provider["id"], cc.InviteRequest("no@test.local"))
     declined = cc.decline(inv["token"], "Swamped this month.")
     assert declined["status"] == "declined" and declined["responded_at"]
@@ -264,7 +264,7 @@ def test_decline_closes_it(ctx, provider):
 def test_available_slots_fit_the_session(ctx, provider, offering):
     """Offering somebody 16:45 for a 60-minute session is an invitation to
     hit an error."""
-    import coffee_chats as cc
+    from domain import coffee_chats as cc
     inv = cc.create_invite(provider["id"],
                            cc.InviteRequest("fit@test.local", offering_id=offering["id"]))
     for day in cc.available_slots(inv):
@@ -273,8 +273,8 @@ def test_available_slots_fit_the_session(ctx, provider, offering):
 
 
 def test_stats_count_conversion(ctx, provider):
-    import coffee_chats as cc
-    from calendar_logic import slot_starts_for
+    from domain import coffee_chats as cc
+    from domain.calendar_logic import slot_starts_for
     a = cc.create_invite(provider["id"], cc.InviteRequest("s1@test.local"))
     cc.create_invite(provider["id"], cc.InviteRequest("s2@test.local"))
     day = a_weekday()

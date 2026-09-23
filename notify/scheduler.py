@@ -1,6 +1,6 @@
 """
-scheduler.py
--------------
+notify/scheduler.py
+--------------------
 The one background timer.
 
 Split out of notifications.py, which was deciding what to say, how it should
@@ -21,8 +21,8 @@ import logging
 import os
 import threading
 
-import coffee_notifications
-import notifications
+from notify import coffee_notifications
+from notify import notifications
 
 log = logging.getLogger("almanac.scheduler")
 

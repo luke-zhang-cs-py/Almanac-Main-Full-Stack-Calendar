@@ -98,7 +98,7 @@ def test_revoking_somebody_elses_invite_is_a_404(client, provider, admin):
 def test_a_guest_page_whose_host_is_gone(client, provider):
     """The host account is deleted between the invite going out and the
     guest clicking. The link should say so rather than 500."""
-    import database as db
+    from core import database as db
 
     made = client.post("/api/coffee/invites", json={"email": "orphan@test.local"},
                        headers=provider["auth"]).get_json()["invite"]
@@ -229,7 +229,7 @@ def test_a_booking_that_does_not_land_on_the_grid_is_refused(ctx, provider):
     The provider fixture runs a 15-minute grid, so 20 minutes is the
     smallest request that cannot be tiled.
     """
-    import calendar_logic
+    from domain import calendar_logic
 
     day = dt.date.today() + dt.timedelta(days=5)
     while day.weekday() > 4:

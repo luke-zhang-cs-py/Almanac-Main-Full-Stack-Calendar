@@ -11,10 +11,10 @@ booking page open to a token holder.
 
 from flask import Blueprint, g, jsonify, request
 
-import database as db
-import offerings
-from auth import roles_required, token_required
-from offerings import OfferingError
+from core import database as db
+from domain import offerings
+from accounts.auth import roles_required, token_required
+from domain.offerings import OfferingError
 
 bp = Blueprint("offering_routes", __name__, url_prefix="/api")
 

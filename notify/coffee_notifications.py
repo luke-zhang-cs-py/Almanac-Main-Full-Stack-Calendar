@@ -1,6 +1,6 @@
 """
-coffee_notifications.py
-------------------------
+notify/coffee_notifications.py
+-------------------------------
 The emails that carry a coffee chat from ask to booking.
 
 Separate from notifications.py for two reasons. That module is already five
@@ -26,12 +26,12 @@ both use it.
 
 import logging
 
-import coffee_chats
-import database as db
-import mailer
-from email_render import details as appointment_details
-from email_render import long_date, render, url, when
-from notifications import load_appointment
+from domain import coffee_chats
+from core import database as db
+from notify import mailer
+from notify.email_render import details as appointment_details
+from notify.email_render import long_date, render, url, when
+from notify.notifications import load_appointment
 
 log = logging.getLogger(__name__)
 

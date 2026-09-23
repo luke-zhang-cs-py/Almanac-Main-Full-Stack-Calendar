@@ -2,9 +2,9 @@ import re
 
 from flask import Blueprint, g, jsonify, request
 
-import database as db
-import notifications
-from auth import create_token, hash_password, token_required, verify_password
+from core import database as db
+from notify import notifications
+from accounts.auth import create_token, hash_password, token_required, verify_password
 
 bp = Blueprint("auth_routes", __name__, url_prefix="/api/auth")
 

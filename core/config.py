@@ -1,7 +1,11 @@
 import logging
 import os
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# The project root, which is one level up now that this module lives in
+# core/. It is not the directory this file is in: BASE_DIR is only ever used
+# to place the default SQLite file, and that belongs beside app.py where
+# somebody can find it -- not inside a package.
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 log = logging.getLogger("almanac.config")
 
@@ -33,7 +37,7 @@ class Config:
     # Cloud: set DATABASE_URL to a Postgres connection string, e.g. one
     # issued by Supabase / Neon / Render / Railway / AWS RDS:
     #   postgres://user:password@host:5432/dbname
-    # No code changes are required to switch -- see database.py.
+    # No code changes are required to switch -- see core/database.py.
     DATABASE_URL = os.environ.get(
         "DATABASE_URL", "sqlite:///" + os.path.join(BASE_DIR, "appointments.db")
     )
@@ -118,8 +122,8 @@ def secret_key_problem(secret_key):
     """
     if secret_key == DEV_SECRET_KEY:
         return ("SECRET_KEY is still the development placeholder committed in "
-                "config.py. It signs every session token and it is public. "
-                "Generate one with: "
+                "core/config.py. It signs every session token and it is "
+                "public. Generate one with: "
                 "python -c \"import secrets; print(secrets.token_urlsafe(48))\"")
     size = len((secret_key or "").encode("utf-8"))
     if size < MIN_SECRET_BYTES:

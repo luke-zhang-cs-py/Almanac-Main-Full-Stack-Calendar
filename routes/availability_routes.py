@@ -13,10 +13,10 @@ import re
 
 from flask import Blueprint, g, jsonify, request
 
-import database as db
-from auth import roles_required, token_required
+from core import database as db
+from accounts.auth import roles_required, token_required
 from routes import camel_keys
-from calendar_logic import get_free_slots
+from domain.calendar_logic import get_free_slots
 
 bp = Blueprint("availability_routes", __name__, url_prefix="/api")
 

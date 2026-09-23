@@ -11,7 +11,7 @@ appointments, availability, users and the email log returned `dict(row)`
 straight out of SQLite, so the same client received `guestEmail` from one
 endpoint and `start_time` from the next.
 
-`coffee_chats.host_view` and `offerings.owner_view` fixed their half by
+`domain.coffee_chats.host_view` and `domain.offerings.owner_view` fixed
 hand-writing a serialiser per shape. That does not scale to rows with a
 dozen columns whose only transformation is the naming, so the rest goes
 through `camel_keys`, which converts at the boundary and leaves snake_case

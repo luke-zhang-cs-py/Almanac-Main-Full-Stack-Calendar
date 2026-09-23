@@ -6,7 +6,7 @@ worth pinning is that neither half of the sweep can take the other down with
 it.
 """
 
-import scheduler
+from notify import scheduler
 
 
 def test_a_sweep_runs_every_part(ctx):
@@ -25,7 +25,7 @@ def test_a_sweep_runs_every_part(ctx):
 def test_a_failing_nudge_sweep_does_not_stop_reminders(ctx, monkeypatch, booking):
     """These ride one tick precisely so there is one thing to go wrong. That
     only helps if one going wrong does not take the other with it."""
-    import coffee_notifications
+    from notify import coffee_notifications
 
     def explode(now=None):
         raise RuntimeError("coffee is off")
@@ -39,7 +39,7 @@ def test_a_failing_nudge_sweep_does_not_stop_reminders(ctx, monkeypatch, booking
 
 
 def test_a_failing_reminder_scan_does_not_stop_nudges(ctx, monkeypatch):
-    import notifications
+    from notify import notifications
 
     def explode(now=None):
         raise RuntimeError("database went away")
@@ -55,7 +55,7 @@ def test_a_failing_nudge_scan_does_not_stop_the_others(ctx, monkeypatch):
     """The newest part of the sweep gets the same isolation as the rest.
     Adding a third call to that loop is exactly when the one nobody wrapped
     goes unnoticed, because it only shows up on the day it throws."""
-    import notifications
+    from notify import notifications
 
     def explode(now=None):
         raise RuntimeError("the clock went backwards")

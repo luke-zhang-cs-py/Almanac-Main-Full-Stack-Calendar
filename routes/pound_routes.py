@@ -16,9 +16,9 @@ keystroke and must not care whether the limit has room.
 
 from flask import Blueprint, g, jsonify, request
 
-import pounds
-from auth import token_required
-from pounds import PoundError
+from domain import pounds
+from accounts.auth import token_required
+from domain.pounds import PoundError
 from routes import camel_keys
 
 bp = Blueprint("pound_routes", __name__, url_prefix="/api")

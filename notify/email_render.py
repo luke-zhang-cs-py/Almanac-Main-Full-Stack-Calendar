@@ -1,6 +1,6 @@
 """
-email_render.py
-----------------
+notify/email_render.py
+-----------------------
 How an Almanac email looks, and how it words a date.
 
 Split out of notifications.py, which had grown to five hundred lines by doing

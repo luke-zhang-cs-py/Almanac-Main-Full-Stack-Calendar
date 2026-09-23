@@ -58,7 +58,7 @@ def test_this_module_agrees_with_the_wallet_case_for_case(cases):
     them here is the only thing standing between two copies of this
     arithmetic and a silent disagreement about money.
     """
-    import pounds
+    from domain import pounds
 
     for case in cases["cases"]:
         cad = pounds._parts(case["cadRate"])
@@ -72,7 +72,7 @@ def test_this_module_agrees_with_the_wallet_case_for_case(cases):
 
 
 def test_the_limit_and_the_markup_match_the_wallet(cases):
-    import pounds
+    from domain import pounds
     assert pounds.LIMIT_MINOR == cases["limitMinor"]
     assert pounds.CIBC_FEE_BP == cases["feeBp"]
 
@@ -86,7 +86,7 @@ def test_converting_a_thousand_dollars_round_trips_back(cases):
     The property that makes the markup's direction checkable rather than a
     matter of opinion.
     """
-    import pounds
+    from domain import pounds
 
     for case in cases["cases"]:
         if case["cadMinor"] < 100:
@@ -102,7 +102,7 @@ def test_the_shortcut_would_not_round_trip(cases):
     """The negative control. Taking 2.5% off the pounds is the plausible
     wrong answer; if it round-tripped as well, the test above would be
     checking nothing."""
-    import pounds
+    from domain import pounds
 
     worst = 0
     for case in cases["cases"]:
@@ -120,7 +120,7 @@ def test_the_shortcut_would_not_round_trip(cases):
 
 
 def test_rounding_goes_half_away_from_zero():
-    import pounds
+    from domain import pounds
     assert pounds.div_half_up(5, 2) == 3
     assert pounds.div_half_up(-5, 2) == -3
     with pytest.raises(pounds.PoundError):
@@ -130,7 +130,7 @@ def test_rounding_goes_half_away_from_zero():
 def test_money_says_zero_rather_than_free():
     """offerings.money says "Free" for zero, which is right for a price in a
     catalogue and wrong for a column of figures that has to line up."""
-    import pounds
+    from domain import pounds
     assert pounds.money(0) == "£0.00"
     assert pounds.money(52118) == "£521.18"
     assert pounds.money(123456789) == "£1,234,567.89"
@@ -144,14 +144,14 @@ def test_money_says_zero_rather_than_free():
 def test_a_weekend_uses_the_last_business_day(ctx):
     """The ECB publishes on business days. A Sunday is converted at Friday's
     rate and the row says so, rather than reaching forward to Monday."""
-    import pounds
+    from domain import pounds
     got = pounds.quote(10000, SUNDAY)
     assert got["rate_date"] == "2026-09-04"
     assert got["lag_days"] == 2
 
 
 def test_a_weekday_past_the_newest_rate_is_refused(ctx):
-    import pounds
+    from domain import pounds
     with pytest.raises(pounds.PoundError) as raised:
         pounds.quote(10000, "2099-01-05")       # a Monday
     assert "later than the newest rate" in str(raised.value)
@@ -160,7 +160,7 @@ def test_a_weekday_past_the_newest_rate_is_refused(ctx):
 def test_a_weekend_past_the_newest_rate_is_allowed(ctx):
     """Its own rate is never coming, so refusing it would leave weekend
     spending with no figure at all."""
-    import pounds
+    from domain import pounds
     newest = pounds.coverage()["newest"]
     import datetime as dt
     saturday = dt.date.fromisoformat(newest) + dt.timedelta(days=1)
@@ -170,13 +170,13 @@ def test_a_weekend_past_the_newest_rate_is_allowed(ctx):
 
 
 def test_a_date_that_is_not_a_date_is_refused(ctx):
-    import pounds
+    from domain import pounds
     with pytest.raises(pounds.PoundError):
         pounds.quote(10000, "the fifth")
 
 
 def test_the_shipped_file_carries_both_legs(ctx):
-    import pounds
+    from domain import pounds
     cover = pounds.coverage()
     assert cover["days"] > 7000
     assert cover["oldest"] == "1999-01-04"
@@ -209,8 +209,8 @@ def test_recording_and_listing(client, booking):
 def test_the_pounds_are_derived_rather_than_stored(client, booking, ctx):
     """Nothing writes a pound figure to the row, so a refreshed rate file
     changes every total rather than leaving stored figures behind."""
-    import database as db
-    import pounds
+    from core import database as db
+    from domain import pounds
 
     auth_post(client, booking, spentOn=FRIDAY, description="Rent",
               cadCents=100000)
@@ -243,7 +243,7 @@ def test_a_conversion_over_the_limit_is_refused_with_a_figure(client, booking):
 
 def test_exactly_on_the_limit_is_allowed(client, booking, ctx):
     """1,000.00 of a 1,000 budget is spent, not overspent."""
-    import pounds
+    from domain import pounds
     cad, gbp, _on = pounds.legs(FRIDAY)
     exact = pounds.from_pounds(pounds.LIMIT_MINOR, cad, gbp)
 
@@ -298,7 +298,7 @@ def test_the_whole_ledger_needs_a_token(client):
 
 
 def test_parsing_a_rate_with_no_point_and_with_nothing():
-    import pounds
+    from domain import pounds
     assert pounds._parts("20") == (20, 0)
     assert pounds._parts("1.6064") == (16064, 4)
     assert pounds._parts("-0.5") == (-5, 1)
@@ -310,7 +310,7 @@ def test_a_date_arrives_in_any_of_its_shapes():
     """The wire sends strings, the database sends strings, and callers hold
     dates. All three have to land on the same day."""
     import datetime as dt
-    import pounds
+    from domain import pounds
     assert pounds._as_date("2026-09-11") == dt.date(2026, 9, 11)
     assert pounds._as_date(dt.date(2026, 9, 11)) == dt.date(2026, 9, 11)
     assert pounds._as_date(dt.datetime(2026, 9, 11, 17, 30)) == dt.date(2026, 9, 11)
@@ -319,7 +319,7 @@ def test_a_date_arrives_in_any_of_its_shapes():
 def test_a_rate_file_with_junk_in_it_keeps_the_rows_it_can_read(tmp_path):
     """A row with no date, and a rate that is not a number, are skipped
     rather than taking the whole file down with them."""
-    import pounds
+    from domain import pounds
     path = tmp_path / "legs.csv"
     path.write_text(
         "date,CAD,GBP\n"
@@ -337,7 +337,7 @@ def test_a_rate_file_with_junk_in_it_keeps_the_rows_it_can_read(tmp_path):
 
 
 def test_a_rate_file_with_no_rates_is_refused(tmp_path):
-    import pounds
+    from domain import pounds
     path = tmp_path / "empty.csv"
     path.write_text("date,CAD,GBP\n", encoding="utf-8")
     try:
@@ -350,14 +350,14 @@ def test_a_rate_file_with_no_rates_is_refused(tmp_path):
 def test_a_date_with_nothing_within_ten_days_is_refused(ctx):
     """A Saturday far past the newest rate gets past the "a rate is still
     coming" check and then finds nothing to walk back to."""
-    import pounds
+    from domain import pounds
     with pytest.raises(pounds.PoundError) as raised:
         pounds.quote(10000, "2027-01-02")       # a Saturday
     assert "within" in str(raised.value)
 
 
 def test_a_negative_markup_is_refused_in_both_directions(ctx):
-    import pounds
+    from domain import pounds
     cad, gbp, _on = pounds.legs(FRIDAY)
     with pytest.raises(pounds.PoundError):
         pounds.to_pounds(100000, cad, gbp, fee_bp=-1)
@@ -366,7 +366,7 @@ def test_a_negative_markup_is_refused_in_both_directions(ctx):
 
 
 def test_a_published_rate_of_zero_is_refused(ctx):
-    import pounds
+    from domain import pounds
     with pytest.raises(pounds.PoundError):
         pounds.to_pounds(100000, (0, 0), (85815, 5))
 
@@ -376,8 +376,8 @@ def test_a_row_whose_date_lost_its_rate_says_so_instead_of_counting_zero(
     """A stored row is only dollars and a date. If the rate file later stops
     covering that date, the row must say it cannot be converted rather than
     contribute nothing silently and quietly shrink the total."""
-    import database as db
-    import pounds
+    from core import database as db
+    from domain import pounds
 
     db.insert(
         """INSERT INTO pound_conversions

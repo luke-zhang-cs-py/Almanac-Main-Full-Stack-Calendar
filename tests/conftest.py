@@ -1,6 +1,6 @@
 """Shared fixtures.
 
-DATABASE_URL is read at import time by config.Config, and database.py caches
+DATABASE_URL is read at import time by config.Config, and core/database.py
 _IS_POSTGRES from it, so the environment has to be set before anything else
 is imported. That is why this file does the setenv at module level rather
 than inside a fixture.
@@ -34,7 +34,7 @@ def app():
     somewhere new per-test.
     """
     import app as app_module
-    import database as db
+    from core import database as db
 
     flask_app = app_module.app
     flask_app.config["TESTING"] = True
@@ -110,7 +110,7 @@ def admin(client):
     the user row on every request and roles_required reads the role from
     that, not from the claim -- which is what you want when a role changes.
     """
-    import database as db
+    from core import database as db
     token, user = register(client, "admin@test.local", role="provider", name="Admin")
     db.execute("UPDATE users SET role = 'admin' WHERE id = ?", (user["id"],))
     return {"token": token, "id": user["id"],

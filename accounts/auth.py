@@ -5,7 +5,7 @@ import jwt
 from flask import current_app, g, jsonify, request
 from werkzeug.security import check_password_hash, generate_password_hash
 
-import database as db
+from core import database as db
 
 
 def hash_password(raw_password: str) -> str:

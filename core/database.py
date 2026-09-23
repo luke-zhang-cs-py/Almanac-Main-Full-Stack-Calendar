@@ -1,7 +1,7 @@
 """
 Database access layer.
 
-Design goal: the rest of the app (routes/, calendar_logic.py) never touches
+Design goal: the rest of the app (routes/, domain/calendar_logic.py) never
 sqlite3 or psycopg2 directly. It calls query()/execute() from this module.
 That means swapping from local SQLite to a cloud Postgres database is a
 one-line environment variable change (DATABASE_URL), not a code change.
@@ -22,7 +22,7 @@ from contextlib import contextmanager
 
 from flask import g
 
-from config import Config
+from core.config import Config
 
 _IS_POSTGRES = Config.DATABASE_URL.startswith(("postgres://", "postgresql://"))
 _local = threading.local()
@@ -346,7 +346,7 @@ CREATE INDEX IF NOT EXISTS idx_offerings_provider
 -- Somebody spending Canadian dollars in Britain, against a ceiling. The
 -- pounds are deliberately not a column: they are derived from the dollars,
 -- the date and the rate file, and a stored derived figure drifts the first
--- time the rates are refreshed. See pounds.py.
+-- time the rates are refreshed. See domain/pounds.py.
 CREATE TABLE IF NOT EXISTS pound_conversions (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

@@ -17,7 +17,7 @@ import threading
 import pytest
 from flask import current_app
 
-from calendar_logic import _tile, get_free_slots
+from domain.calendar_logic import _tile, get_free_slots
 
 
 def a_date():
@@ -65,7 +65,7 @@ def store_window(provider_id, date_str, **over):
     first -- otherwise a test for "the bad row is skipped" passes on the
     strength of the good rows next to it.
     """
-    import database as db
+    from core import database as db
     db.execute("DELETE FROM availability WHERE provider_id = ?", (provider_id,))
     row = {"day_of_week": day_of_week(date_str), "start_time": "09:00",
            "end_time": "17:00", "slot_minutes": 30}
@@ -78,7 +78,7 @@ def store_window(provider_id, date_str, **over):
 
 
 def store_block(provider_id, date_str, start_time=None, end_time=None):
-    import database as db
+    from core import database as db
     db.execute(
         "INSERT INTO blocked_slots (provider_id, date, start_time, end_time) "
         "VALUES (?, ?, ?, ?)", (provider_id, date_str, start_time, end_time))
@@ -217,7 +217,7 @@ def test_a_whole_day_block_still_works(ctx, provider):
 def test_booking_survives_a_poisoned_calendar(client, provider, booking):
     """The reason any of this matters: the bad row was the provider's, and
     the 500 was the client's."""
-    import database as db
+    from core import database as db
     day = booking["date"]
     db.execute("INSERT INTO blocked_slots (provider_id, date, start_time, end_time) "
                "VALUES (?, ?, ?, ?)", (provider["id"], day, "banana", None))

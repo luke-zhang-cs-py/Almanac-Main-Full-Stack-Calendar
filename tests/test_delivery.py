@@ -16,8 +16,8 @@ import smtplib
 
 import pytest
 
-import mailer
-import scheduler
+from notify import mailer
+from notify import scheduler
 
 
 class FakeSMTP:
@@ -216,7 +216,7 @@ def test_a_failed_message_is_queued_again_rather_than_ignored(client, booking):
     one the insert simply succeeds again and the reclaim path is never
     reached.
     """
-    import database as db
+    from core import database as db
 
     def claim():
         return mailer._claim(a_message(to="retry@test.local",

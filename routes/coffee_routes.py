@@ -17,11 +17,11 @@ should cost you one coffee chat, not read access to a calendar.
 
 from flask import Blueprint, g, jsonify, request
 
-import coffee_chats
-import coffee_notifications
-import database as db
-from auth import roles_required, token_required
-from coffee_chats import InviteError
+from domain import coffee_chats
+from notify import coffee_notifications
+from core import database as db
+from accounts.auth import roles_required, token_required
+from domain.coffee_chats import InviteError
 
 bp = Blueprint("coffee_routes", __name__, url_prefix="/api/coffee")
 
@@ -39,7 +39,7 @@ def _offering_view(invite):
     """
     if not invite["offering_id"]:
         return None
-    import offerings
+    from domain import offerings
     row = offerings.get(invite["offering_id"])
     return offerings.public_view(row) if row else None
 
@@ -176,7 +176,7 @@ def book(token):
     # simply a booking. The host gets the coffee-specific one instead of the
     # generic "New booking", since it names the invite it came from -- two
     # emails about one event is how people learn to filter a sender.
-    import notifications
+    from notify import notifications
     notifications.notify_booked(appointment_id, notify_provider=False)
     coffee_notifications.notify_booked(invite["id"])
 
