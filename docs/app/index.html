@@ -259,6 +259,42 @@
     </p>
   </section>
 
+  <!-- The other half that runs without a server. Relative paths out of
+       docs/app/ on purpose: the bundle test collects only js/ and css/
+       references, and these are neither -- they are siblings in docs/. -->
+  <section class="card demo-about">
+    <h2>The calendar, blank</h2>
+    <p class="lede">The engine above answers <i>when can somebody book me</i>.
+      This is the other side of it: your own week, in one file that needs no
+      server at all.</p>
+
+    <p>
+      <a href="../calendar.html"><img src="../calendar-demo.gif" alt="An empty
+      month; a day is picked, two entries are added to it and appear on the
+      grid, and a to-do is added beside them" class="demo-shot"></a>
+    </p>
+
+    <p>
+      <a href="../calendar.html"><b>Open the blank calendar &rarr;</b></a>
+      &mdash; no term, no diary, no to-dos, nothing of anybody's. The
+      <a href="../planner.html">sample planner</a> is the same engine seeded
+      with an invented term, which shows what it does and is the wrong place
+      to start a real one from: the first job would be deleting somebody
+      else's lectures.
+    </p>
+
+    <p>
+      A <code>file://</code> page can raise a notification while its tab is
+      open and none at all once it is closed &mdash; it cannot register a
+      service worker, so there is no background to run in. That is the seam
+      between the two halves: export a backup from the calendar, import it
+      into Almanac, and the server's sweep mails you before each event whether
+      or not anything is open. <code>domain/schedule.py</code> keys that on the
+      planner's own event ids, so importing the same export twice updates
+      rather than duplicates.
+    </p>
+  </section>
+
   <footer class="demo-foot">
     <p>
       Nothing here is stored. Reload and it is the worked example again.

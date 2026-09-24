@@ -77,6 +77,11 @@ directory on `sys.path`, not the project's.
 python tools/build_planner.py --blank --out calendar.html
 ```
 
+![An empty September; a day is picked, two entries added to it appear on the grid with their BST times, and a to-do is added in the sidebar](docs/calendar-demo.gif)
+
+*Blank, then yours. Nothing is seeded and nothing leaves the browser — the
+entries above were typed into the page while the frames were captured.*
+
 The planner is one self-contained HTML file you double-click — no server, no
 assets, everything kept in that browser. It ships two ways. `planner.html` is
 seeded with an invented term, which shows what it does and is the wrong place

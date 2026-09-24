@@ -163,3 +163,14 @@
 .demo-about-list li:last-child {
   margin-bottom: 0;
 }
+
+/* The calendar still, linked from the section above. Bounded so a wide
+   screen does not blow it up past its own pixel width. */
+.demo-shot {
+  display: block;
+  max-width: 100%;
+  width: 840px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 0.4rem 0 0;
+}
