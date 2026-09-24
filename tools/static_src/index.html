@@ -219,6 +219,46 @@
     </section>
   </div>
 
+  <!-- What the engine belongs to. The banner says what this page is not,
+       which is not the same as saying what Almanac is -- and somebody who
+       arrives here from a search result has been told only the former. -->
+  <section class="card demo-about">
+    <h2>What the engine is part of</h2>
+    <p class="lede">Almanac is a multi-role booking platform: Flask and JWT
+      behind a single-page front end. Everything above is one module of it.</p>
+
+    <ul class="demo-about-list">
+      <li><b>Three roles.</b> Clients book, providers publish hours and a priced
+        catalogue, admins see everyone. Every sensitive endpoint is guarded by
+        <code>@roles_required</code>, revalidated on each request rather than
+        trusted from the token.</li>
+      <li><b>Booking runs both directions.</b> Clients pick from the free slots
+        this page computes. Providers can also send an invite by email that
+        becomes a booking <b>without the guest making an account</b> &mdash; a
+        coffee chat is usually first contact, and asking an alum to register
+        before they can pick a time loses most of them.</li>
+      <li><b>Five kinds of email, each sent exactly once.</b> Welcome,
+        confirmation, cancellation, completion and a 24-hour reminder, queued on
+        a background thread so a slow mail server never slows a booking. Every
+        attempt is logged, and a unique index over that log is what enforces the
+        &ldquo;once&rdquo; &mdash; the guarantee lives in the schema, not in a
+        code path that could be missed.</li>
+      <li><b>Double-booking is impossible at the database level,</b> via a
+        partial unique index rather than an application check a race could slip
+        between.</li>
+      <li><b>Money is an integer in minor units,</b> and <code>0</code> means
+        free: a real answer, not a missing one.</li>
+    </ul>
+
+    <p>
+      Running it is <code>pip install -r requirements.txt</code> then
+      <code>python app.py</code>, on <code>127.0.0.1:5003</code>. It refuses to
+      start reachable from outside with the committed development secret,
+      because that secret is public and it signs every session token.
+      <a href="https://github.com/luke-zhang-cs-py/Almanac-Main-Full-Stack-Calendar#readme">The full README &rarr;</a>
+    </p>
+  </section>
+
   <footer class="demo-foot">
     <p>
       Nothing here is stored. Reload and it is the worked example again.
