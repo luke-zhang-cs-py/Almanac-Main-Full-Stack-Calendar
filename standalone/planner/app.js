@@ -408,6 +408,19 @@
 
   /* ---------------- countdown ---------------- */
   function renderCountdown(){
+    /* No anchor to count from, or nothing to count, means there is no
+     * countdown -- hide the card. Without this the arithmetic below runs
+     * anyway: daysBetween("") is NaN and a CD_START of 0 divides by zero, so
+     * an empty seed printed "NaN days remaining" at the reader. This file
+     * claims above that every lookup has a fallback and the engine runs
+     * against no seed at all; for this one panel that was not true. */
+    var card = document.querySelector(".cdcard");
+    if (!CD_ANCHOR || !(CD_START > 0)){
+      if (card) card.style.display = "none";
+      return;
+    }
+    if (card) card.style.display = "";
+
     var elapsed   = daysBetween(CD_ANCHOR, todayISO);
     var remaining = CD_START - elapsed;
     if (remaining > CD_START) remaining = CD_START;   // before the anchor day

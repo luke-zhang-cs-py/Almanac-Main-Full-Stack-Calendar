@@ -186,6 +186,14 @@ footer a { color: inherit; }
          from standalone/planner/ and fails if this copy has drifted. -->
     <a class="btn" href="planner.html"
        title="One self-contained file, no server, invented sample data">Open the planner</a>
+    <!-- The same engine with nothing in it. The planner above is seeded with
+         an invented term, which shows what the thing does and is the wrong
+         place to start a real one from -- you would be deleting somebody
+         else's lectures first. Built from data.blank.js by the same builder.
+         Export a backup from here and domain/schedule.py imports it, which is
+         how an offline file ends up with server-sent reminders. -->
+    <a class="btn" href="calendar.html"
+       title="The same calendar with nothing in it: no term, no diary, no to-dos. Export a backup and Almanac will remind you.">Start a blank calendar</a>
     <!-- The slot engine on its own, ported to JavaScript.
          tools/build_static.py refuses to publish it if the port and
          domain/calendar_logic.py disagree about a single slot. -->
@@ -395,8 +403,8 @@ var OMITTED = [
 ];
 
 var TESTS = [
+  { file: 'test_planner.py',              n: 39, of: 'the standalone planner, and that no seed of anyone’s is committed with it' },
   { file: 'test_appointments_api.py',     n: 36, of: 'booking, cancelling, completing, and who may do which' },
-  { file: 'test_planner.py',              n: 36, of: 'the standalone planner, and that no seed of anyone’s is committed with it' },
   { file: 'test_email_render.py',         n: 33, of: 'that the text and HTML halves cannot drift apart' },
   { file: 'test_coffee_chats.py',         n: 32, of: 'the invite lifecycle end to end' },
   { file: 'test_pounds.py',               n: 31, of: 'the cross rate and the markup, against the wallet fixture' },
@@ -421,7 +429,7 @@ var TESTS = [
   { file: 'test_scheduler.py',            n: 10, of: 'the background sweep' }
 ];
 
-var TEST_LINES = 6069;
+var TEST_LINES = 6110;
 
 /* Which interpreter produced the statement counts above. It matters: coverage
  * counts a `with` block or a multi-line call differently between versions, so

@@ -42,7 +42,8 @@ sys.path.insert(0, os.path.join(ROOT, "tools"))
 import build_planner as builder   # noqa: E402
 
 SRC = os.path.join(ROOT, "standalone", "planner")
-SOURCES = ("index.html", "style.css", "app.js", "data.sample.js")
+SOURCES = ("index.html", "style.css", "app.js",
+           "data.sample.js", "data.blank.js")
 
 BROWSERS = (
     r"C:\Program Files\Google\Chrome\Application\chrome.exe",
@@ -583,3 +584,43 @@ def test_the_policy_claims_nothing_a_meta_tag_cannot_deliver():
     for directive in ("default-src 'none'", "form-action 'none'",
                       "base-uri 'none'"):
         assert directive in policy.group(1), directive
+
+
+def test_the_blank_seed_is_actually_blank():
+    """The empty calendar's whole value is that there is nothing in it. A key
+    that quietly gains content makes it a second sample seed, and somebody
+    starting a real term from it would inherit whatever crept in."""
+    text = source("data.blank.js")
+    for key in ("COUNTDOWN_DATES", "FIXTURES", "DONE_MATCHES", "TERM_SKIP",
+                "WEEK_ONE", "WEEK_A", "WEEK_B", "DIARY",
+                "SEED_TODOS", "SEED_DAY_TODOS"):
+        assert re.search(key + r"\s*:\s*\[\s*\]", text), (
+            f"{key} in data.blank.js is no longer an empty list")
+    for key in ("COMPS", "MODULE_COLOUR"):
+        assert re.search(key + r"\s*:\s*\{\s*\}", text), (
+            f"{key} in data.blank.js is no longer an empty object")
+    for key in ("CD_ANCHOR", "TERM_FIRST", "TERM_END"):
+        assert re.search(key + r'\s*:\s*""', text), (
+            f"{key} in data.blank.js is no longer empty")
+
+
+def test_the_blank_build_carries_none_of_the_sample():
+    """Built from the blank seed, not the sample -- the mistake being guarded
+    against is --blank silently falling back to the default seed."""
+    page = builder.build(os.path.join(SRC, "data.blank.js"))
+    for invented in ("MAT 1001", "Rovers United", "Buy a rail card",
+                     "Maths LT1", "sample-"):
+        assert invented not in page, (
+            f"the blank calendar contains {invented!r} from the sample seed")
+
+
+def test_an_empty_seed_does_not_render_a_broken_countdown():
+    """With no anchor the countdown arithmetic is NaN and the percentage
+    divides by zero, which printed 'NaN days remaining' on the empty
+    calendar. The card is hidden instead -- an empty planner should look
+    empty, not broken."""
+    code = source("app.js")
+    assert 'querySelector(".cdcard")' in code, (
+        "renderCountdown no longer looks for the card it needs to hide")
+    assert re.search(r"if\s*\(!CD_ANCHOR\s*\|\|\s*!\(CD_START\s*>\s*0\)\)", code), (
+        "renderCountdown no longer guards against an absent countdown")

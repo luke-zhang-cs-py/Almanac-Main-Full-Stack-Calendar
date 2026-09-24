@@ -8,7 +8,7 @@ Booking, from both directions: clients book a provider's free slots, and
 providers can email someone an invite that turns into a booking without the
 guest ever making an account.
 
-### ▶ [Try the slot engine →](https://luke-zhang-cs-py.github.io/Almanac-Main-Full-Stack-Calendar/app/)
+### ▶ [Try the slot engine →](https://luke-zhang-cs-py.github.io/Almanac-Main-Full-Stack-Calendar/app/) · [Start a blank calendar →](https://luke-zhang-cs-py.github.io/Almanac-Main-Full-Stack-Calendar/calendar.html)
 
 ![Five set-ups running through the same engine: a full week of nine-to-five, a block that clips one slot, an afternoon blocked off, a day booked solid showing nothing bookable, and today with the morning already gone](docs/demo.gif)
 
@@ -71,6 +71,34 @@ tools/            build_static.py, build_planner.py, refresh_figures.py
 `seed_luke.py` stay because they're run as scripts — which puts *their*
 directory on `sys.path`, not the project's.
 
+## The calendar, blank
+
+```bash
+python tools/build_planner.py --blank --out calendar.html
+```
+
+The planner is one self-contained HTML file you double-click — no server, no
+assets, everything kept in that browser. It ships two ways. `planner.html` is
+seeded with an invented term, which shows what it does and is the wrong place
+to start a real one from: you'd be deleting somebody else's lectures first.
+[`calendar.html`](docs/calendar.html) is the same engine with **nothing** in
+it — no term, no diary, no fixtures, no to-dos, no countdown.
+
+Your own timetable is not in this repository and should not be. A term
+timetable says where somebody is at every hour of every weekday; `.gitignore`
+blocks the real seed and `tests/test_planner.py` fails if one appears beside
+the sample. Build yours with `--data` and keep it outside the repo.
+
+**Where the full-stack half comes in.** A `file://` page can show a
+notification while its tab is open and nothing at all once it's closed — it
+can't register a service worker, so there's no background to run in. That's
+the gap Almanac closes: export a backup from the calendar, import it, and the
+server's sweep emails you before each event whether or not anything is open.
+`domain/schedule.py` owns that, keyed on the planner's own event ids so
+re-importing updates rather than duplicates. A lecture is deliberately *not*
+an appointment — no second party, no provider to notify, no slot to hold — so
+it lives in its own table with no booking semantics.
+
 ## The parts worth knowing
 
 **A free slot has to survive a lot.** `domain/calendar_logic.py` turns
@@ -102,7 +130,7 @@ a missing one.
 pytest -q
 ```
 
-503 tests, 100% of 1,952 statements. 14 of those guard the published slot-engine
+506 tests, 100% of 1,952 statements. 14 of those guard the published slot-engine
 demo: every copied file byte-identical to its source, no `fetch()` anywhere so
 `file://` keeps working, and every clause of the "this is not the platform"
 banner still present.

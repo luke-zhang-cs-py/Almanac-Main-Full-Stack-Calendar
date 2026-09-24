@@ -44,6 +44,7 @@ import re
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "standalone", "planner")
 SAMPLE = os.path.join(SRC, "data.sample.js")
+BLANK = os.path.join(SRC, "data.blank.js")
 
 # No frame-ancestors. A <meta> CSP cannot deliver that directive: the
 # browser ignores it and logs a notice saying so, which means listing it
@@ -131,12 +132,18 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--data", default=None,
                         help="the seed to inline (default: the sample)")
+    parser.add_argument("--blank", action="store_true",
+                        help="build the empty calendar: no term, no diary, "
+                             "no fixtures, no to-dos")
     parser.add_argument("--out",
                         default=os.path.join(ROOT, "september-planner.html"),
                         help="where to write the file")
     args = parser.parse_args()
 
-    data_path = args.data or SAMPLE
+    if args.blank and args.data:
+        raise SystemExit("--blank and --data both name a seed; pick one")
+
+    data_path = BLANK if args.blank else (args.data or SAMPLE)
     if not os.path.exists(data_path):
         raise SystemExit("no such seed: %s" % data_path)
 
