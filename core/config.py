@@ -55,7 +55,7 @@ class Config:
     # tally 5005 -- so several can run at once, which is the normal state
     # when they are being compared. This defaulted to 5000 and therefore
     # collided with Toronto Transit: whichever started second failed to
-    # bind. The published overview and CONTRIBUTING.md already said 5003;
+    # bind. The published overview and .github/CONTRIBUTING.md already said 5003;
     # the code was the one that disagreed.
     DEFAULT_PORT = 5003
     PORT = int(os.environ.get("PORT", str(DEFAULT_PORT)))

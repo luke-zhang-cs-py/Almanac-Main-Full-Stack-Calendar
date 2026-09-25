@@ -94,6 +94,9 @@ modules — `python -m scripts.seed_data` — because a file run directly puts
 *its own* directory on `sys.path`, and `scripts/` is not what they import
 from.
 
+`notes/` holds the long-form write-ups — `CODE_AUDIT.md` — and
+`CONTRIBUTING.md` is in `.github/`, which is where GitHub looks for it.
+
 ## How the two halves meet
 
 ```bash
@@ -154,4 +157,4 @@ requires each to be caught.
 
 ## License
 
-[MIT](LICENSE) — see [CONTRIBUTING.md](CONTRIBUTING.md) for setup and conventions.
+[MIT](LICENSE) — see [CONTRIBUTING.md](.github/CONTRIBUTING.md) for setup and conventions.
