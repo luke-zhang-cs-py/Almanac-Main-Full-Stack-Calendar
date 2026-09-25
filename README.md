@@ -4,11 +4,29 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.12-blue.svg)](https://www.python.org/)
 
-Booking, from both directions: clients book a provider's free slots, and
-providers can email someone an invite that turns into a booking without the
-guest ever making an account.
+Your own calendar, and the booking platform behind it: clients book a
+provider's free slots, and providers can email someone an invite that turns
+into a booking without the guest ever making an account.
 
-### ▶ [Try the slot engine →](https://luke-zhang-cs-py.github.io/Almanac-Main-Full-Stack-Calendar/app/) · [Start a blank calendar →](https://luke-zhang-cs-py.github.io/Almanac-Main-Full-Stack-Calendar/calendar.html)
+### ▶ [Open the calendar →](https://luke-zhang-cs-py.github.io/Almanac-Main-Full-Stack-Calendar/calendar.html) · [then the booking engine →](https://luke-zhang-cs-py.github.io/Almanac-Main-Full-Stack-Calendar/app/)
+
+![An empty September; a day is picked, two entries added to it appear on the grid with their BST times, and a to-do is added in the sidebar](docs/calendar-demo.gif)
+
+*Blank, then yours. One self-contained HTML file you double-click — no server,
+no assets, nothing leaving the browser. The entries above were typed into the
+page while the frames were captured.*
+
+It ships two ways. [`calendar.html`](docs/calendar.html) has **nothing** in it
+— no term, no diary, no fixtures, no to-dos, no countdown. `planner.html` is
+the same engine seeded with an invented term, which shows what it does and is
+the wrong place to start a real one from: you would be deleting somebody
+else's lectures first. Build your own with
+`python tools/build_planner.py --data …`, and keep the seed outside the repo
+— a term timetable says where somebody is at every hour of every weekday, so
+`.gitignore` blocks the real one and `tests/test_planner.py` fails if one
+appears beside the sample.
+
+## Then the booking half
 
 ![Five set-ups running through the same engine: a full week of nine-to-five, a block that clips one slot, an afternoon blocked off, a day booked solid showing nothing bookable, and today with the morning already gone](docs/demo.gif)
 
@@ -16,12 +34,12 @@ guest ever making an account.
 recomputes in the tab. Each example shows the engine's own arithmetic: how many
 windows it read, how many slots it tiled, how many it dropped and why.*
 
-This is **the slot engine only, not the platform** — JWT auth, a relational
-database, transactional email and a background reminder thread genuinely can't
-run in a browser tab, so none of them are mimed. `js/slots.js` is a port of
-`domain/calendar_logic.py`, and `tools/build_static.py` runs the two against
-each other in a real browser over 21 scenarios before publishing, refusing to
-write a single file if they disagree about one slot.
+That page is **the slot engine only, not the platform** — JWT auth, a
+relational database, transactional email and a background reminder thread
+genuinely can't run in a browser tab, so none of them are mimed. `js/slots.js`
+is a port of `domain/calendar_logic.py`, and `tools/build_static.py` runs the
+two against each other in a real browser over 21 scenarios before publishing,
+refusing to write a single file if they disagree about one slot.
 
 **[Read the full write-up →](https://luke-zhang-cs-py.github.io/Almanac-Main-Full-Stack-Calendar/)**
 — what a free slot has to survive, how five kinds of email get sent exactly
@@ -74,28 +92,11 @@ modules — `python -m scripts.seed_data` — because a file run directly puts
 *its own* directory on `sys.path`, and `scripts/` is not what they import
 from.
 
-## The calendar, blank
+## How the two halves meet
 
 ```bash
 python tools/build_planner.py --blank --out calendar.html
 ```
-
-![An empty September; a day is picked, two entries added to it appear on the grid with their BST times, and a to-do is added in the sidebar](docs/calendar-demo.gif)
-
-*Blank, then yours. Nothing is seeded and nothing leaves the browser — the
-entries above were typed into the page while the frames were captured.*
-
-The planner is one self-contained HTML file you double-click — no server, no
-assets, everything kept in that browser. It ships two ways. `planner.html` is
-seeded with an invented term, which shows what it does and is the wrong place
-to start a real one from: you'd be deleting somebody else's lectures first.
-[`calendar.html`](docs/calendar.html) is the same engine with **nothing** in
-it — no term, no diary, no fixtures, no to-dos, no countdown.
-
-Your own timetable is not in this repository and should not be. A term
-timetable says where somebody is at every hour of every weekday; `.gitignore`
-blocks the real seed and `tests/test_planner.py` fails if one appears beside
-the sample. Build yours with `--data` and keep it outside the repo.
 
 **Where the full-stack half comes in.** A `file://` page can show a
 notification while its tab is open and nothing at all once it's closed — it
