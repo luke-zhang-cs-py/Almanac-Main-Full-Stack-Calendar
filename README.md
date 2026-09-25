@@ -32,7 +32,7 @@ once, and every bug this has had. There's also an
 
 ```bash
 pip install -r requirements.txt
-python seed_data.py        # creates admin@almanac.local / admin12345
+python -m scripts.seed_data   # creates admin@almanac.local / admin12345
 python app.py              # http://127.0.0.1:5003
 ```
 

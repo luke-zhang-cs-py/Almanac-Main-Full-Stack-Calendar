@@ -46,7 +46,8 @@ PAGE = os.path.join(ROOT, "docs", "index.html")
 # Directories that hold no shipped module. tests/ is excluded from coverage by
 # the config too; the rest are never source.
 SKIP_DIRS = {".git", "__pycache__", "tests", "htmlcov", ".venv", "venv",
-             "node_modules", "docs", "tools", "data", "static", "templates"}
+             "node_modules", "docs", "tools", "data", "static", "templates",
+             "scripts"}
 
 # The page's own history: counts that describe what a figure *used to* say.
 # These are the only numbers on the page allowed to be wrong, because being
@@ -315,9 +316,14 @@ def test_every_module_is_on_the_page(page):
     assert present - listed == set(), (
         f"these modules are in the project but not on the page: "
         f"{sorted(present - listed)}")
-    assert listed - present == set(), (
-        f"the page lists modules that no longer exist: "
-        f"{sorted(listed - present)}")
+    # The omitted scripts live in scripts/, which source_files() skips on
+    # purpose, so their existence is checked against the disk rather than
+    # against a scan that is meant not to find them. A name that is on the
+    # page and nowhere at all is still caught.
+    gone = sorted(name for name in listed - present
+                  if not os.path.exists(os.path.join(ROOT, name)))
+    assert gone == [], (
+        f"the page lists modules that no longer exist: {gone}")
 
 
 def test_the_omitted_modules_really_are_omitted(page):

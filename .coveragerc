@@ -3,9 +3,8 @@ omit =
     tests/*
     # Developer scripts, not shipped code.
     tools/*
-    login_page.py
-    seed_data.py
-    seed_luke.py
+    # login_page.py, seed_data.py and seed_luke.py, which live together now.
+    scripts/*
 
 [report]
 exclude_lines =

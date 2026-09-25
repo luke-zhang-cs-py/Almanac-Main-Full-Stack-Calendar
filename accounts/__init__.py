@@ -13,7 +13,7 @@ obvious in a directory listing -- not filed next to the SQLite adapter.
             that guard every route
 
 The HTTP half of this lives in `routes/auth_routes.py` (register, login,
-me), which imports from here. `login_page.py` at the root is a standalone
-demo of the same API shape with its own database; it stayed at the root
-because it is something you run, not something anything imports.
+me), which imports from here. `scripts/login_page.py` is a standalone demo of
+the same API shape with its own database; it sits with the other things you
+run by hand rather than with anything the app imports.
 """

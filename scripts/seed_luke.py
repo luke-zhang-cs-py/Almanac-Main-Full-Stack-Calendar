@@ -5,9 +5,9 @@ Sets up Luke as a provider: a full week of availability and a priced
 catalogue of software engineering, computer science and web development
 sessions.
 
-    python seed_luke.py                 # create or top up
-    python seed_luke.py --reset         # wipe his offerings first
-    python seed_luke.py --list          # show what is there
+    python -m scripts.seed_luke                 # create or top up
+    python -m scripts.seed_luke --reset         # wipe his offerings first
+    python -m scripts.seed_luke --list          # show what is there
 
 Idempotent by design. Running it twice does not create two accounts or
 duplicate the catalogue, because the realistic use is running it again after

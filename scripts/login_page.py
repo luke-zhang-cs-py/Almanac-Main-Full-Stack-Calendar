@@ -3,7 +3,7 @@ login_page.py — a single-file, self-contained login/register server.
 
 Run it on its own:
     pip install flask pyjwt werkzeug
-    python login_page.py
+    python -m scripts.login_page
     -> open http://localhost:5006
 
 It creates its own SQLite file (login_users.db) next to this script and
@@ -30,7 +30,10 @@ from core import config
 # check_secret_key() below (also imported, not re-implemented) recognizes it.
 SECRET_KEY = os.environ.get("SECRET_KEY", config.DEV_SECRET_KEY)
 JWT_EXP_HOURS = 24
-DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(os.path.abspath(__file__)), "login_users.db"))
+# Two dirnames: this script lives in scripts/, and its database belongs
+# at the project root where it has always been written.
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB_PATH = os.environ.get("DB_PATH", os.path.join(_ROOT, "login_users.db"))
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 ALLOWED_ROLES = ("client", "provider")

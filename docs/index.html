@@ -397,9 +397,9 @@ var MODULES = [
 /* Left out of coverage on purpose, and named here so the omission is visible
  * rather than silent. */
 var OMITTED = [
-  { name: 'login_page.py', lines: 424, why: 'a deliberately standalone demo server with its own database' },
-  { name: 'seed_luke.py',  lines: 278, why: 'seeds a provider with hours and a catalogue' },
-  { name: 'seed_data.py',  lines:  32, why: 'seeds the demo accounts' }
+  { name: 'scripts/login_page.py', lines: 427, why: 'a deliberately standalone demo server with its own database' },
+  { name: 'scripts/seed_luke.py',  lines: 278, why: 'seeds a provider with hours and a catalogue' },
+  { name: 'scripts/seed_data.py',  lines:  32, why: 'seeds the demo accounts' }
 ];
 
 var TESTS = [
@@ -429,7 +429,7 @@ var TESTS = [
   { file: 'test_scheduler.py',            n: 10, of: 'the background sweep' }
 ];
 
-var TEST_LINES = 6110;
+var TEST_LINES = 6116;
 
 /* Which interpreter produced the statement counts above. It matters: coverage
  * counts a `with` block or a multi-line call differently between versions, so

@@ -1,6 +1,6 @@
 """
 Creates a starter admin account so there's a way into the admin views on a
-brand-new database. Run once with:  python seed_data.py
+brand-new database. Run once with:  python -m scripts.seed_data
 """
 
 from core import database as db
