@@ -8,9 +8,9 @@ Your own calendar, and the booking platform behind it: clients book a
 provider's free slots, and providers can email someone an invite that turns
 into a booking without the guest ever making an account.
 
-### ▶ [Open the calendar →](https://luke-zhang-cs-py.github.io/Almanac-Main-Full-Stack-Calendar/calendar.html) · [then the booking engine →](https://luke-zhang-cs-py.github.io/Almanac-Main-Full-Stack-Calendar/app/)
+### ▶ [Start a blank calendar →](https://luke-zhang-cs-py.github.io/Almanac-Main-Full-Stack-Calendar/calendar.html)
 
-![An empty September; a day is picked, two entries added to it appear on the grid with their BST times, and a to-do is added in the sidebar](docs/calendar-demo.gif)
+![An empty September: a day is opened and two entries typed into it appear on its timeline and on the grid with their BST times, a task is added to that day, then the next day gets an entry of its own, and two to-dos are added in the sidebar](docs/calendar-demo.gif)
 
 *Blank, then yours. One self-contained HTML file you double-click — no server,
 no assets, nothing leaving the browser. The entries above were typed into the
@@ -27,6 +27,8 @@ else's lectures first. Build your own with
 appears beside the sample.
 
 ## Then the booking half
+
+### ▶ [Try the slot engine →](https://luke-zhang-cs-py.github.io/Almanac-Main-Full-Stack-Calendar/app/)
 
 ![Five set-ups running through the same engine: a full week of nine-to-five, a block that clips one slot, an afternoon blocked off, a day booked solid showing nothing bookable, and today with the morning already gone](docs/demo.gif)
 
