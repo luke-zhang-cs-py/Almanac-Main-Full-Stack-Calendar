@@ -62,14 +62,17 @@ notify/           mailer.py, notifications.py,    transport, occasions, layout,
                   coffee_notifications.py,        and the one background timer
                   email_render.py, scheduler.py
 routes/           nine blueprints, one per area of the API
+scripts/          seed_data.py, seed_luke.py,     things you run by hand;
+                  login_page.py                   nothing imports them
 docs/app/         the slot engine, ported to JS and published on its own
 tools/            build_static.py, build_planner.py, refresh_figures.py
 ```
 
 `app.py` stays at the root because `Flask(__name__)` resolves `templates/` and
-`static/` relative to its own directory. `login_page.py`, `seed_data.py` and
-`seed_luke.py` stay because they're run as scripts — which puts *their*
-directory on `sys.path`, not the project's.
+`static/` relative to its own directory. The three in `scripts/` are run as
+modules — `python -m scripts.seed_data` — because a file run directly puts
+*its own* directory on `sys.path`, and `scripts/` is not what they import
+from.
 
 ## The calendar, blank
 
