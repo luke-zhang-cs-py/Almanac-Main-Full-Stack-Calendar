@@ -119,8 +119,9 @@ it lives in its own table with no booking semantics.
 recurring weekly hours, one-off blocks and existing bookings into bookable
 times — dropping anything that overlaps something busy *at all* (not just an
 exact match), anything already past on today's date, and anything too short for
-the requested session. A partial-unique index makes race-condition
-double-booking impossible at the database level rather than in application code.
+the requested session. Two people racing for the same time can't both win:
+a partial-unique index refuses two bookings that start together, and every
+booking path checks and writes under one table lock, which covers overlaps.
 
 **Five kinds of email, each sent exactly once.** Welcome, confirmation,
 cancellation, completion and a 24-hour reminder, all without anyone pressing a
