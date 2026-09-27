@@ -199,3 +199,39 @@ def test_pages_render(client, provider):
     guest = client.get(f"/coffee/{made['token']}")
     assert guest.status_code == 200
     assert b"api/coffee/public" in guest.data
+
+
+def test_the_nudge_button_stops_at_the_cap(client, provider):
+    """The two-nudge cap was only enforced by the automatic sweep. The
+    host's button sent as many as it was pressed -- "a third is pestering",
+    and this sent a tenth."""
+    from core import database as db
+    from domain import coffee_chats
+    made = client.post("/api/coffee/invites", json={"email": "capped@test.local"},
+                       headers=provider["auth"]).get_json()["invite"]
+    codes = [client.post(f"/api/coffee/invites/{made['id']}/nudge",
+                         headers=provider["auth"]).status_code
+             for _ in range(coffee_chats.MAX_NUDGES + 2)]
+    assert codes == [200] * coffee_chats.MAX_NUDGES + [409, 409]
+    nudges = db.query("SELECT id FROM email_log WHERE kind = 'coffee_nudge'")
+    assert len(nudges) == coffee_chats.MAX_NUDGES
+
+
+def test_a_double_clicked_nudge_sends_once(client, provider, monkeypatch):
+    """Sent first and counted after, so two presses that both read the
+    invite before either had counted both sent. The second press here is
+    handed the invite as the first one saw it."""
+    from core import database as db
+    from domain import coffee_chats
+    made = client.post("/api/coffee/invites", json={"email": "dbl@test.local"},
+                       headers=provider["auth"]).get_json()["invite"]
+    stale = coffee_chats.get_invite(made["id"])
+    client.post(f"/api/coffee/invites/{made['id']}/nudge", headers=provider["auth"])
+    reads, real = iter([stale]), coffee_chats.get_invite
+    monkeypatch.setattr(coffee_chats, "get_invite",
+                        lambda invite_id: next(reads, None) or real(invite_id))
+    second = client.post(f"/api/coffee/invites/{made['id']}/nudge",
+                         headers=provider["auth"])
+    assert second.status_code == 409
+    nudges = db.query("SELECT id FROM email_log WHERE kind = 'coffee_nudge'")
+    assert len(nudges) == 1

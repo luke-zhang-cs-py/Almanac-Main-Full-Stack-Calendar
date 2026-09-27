@@ -19,6 +19,36 @@ where it belongs: in the database, and in the SQL that talks to it.
 """
 
 
+import datetime as _dt
+import re
+
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+HHMM = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+YYYY_MM_DD = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def fail(exc, code=400):
+    """An error response carrying the exception's sentence."""
+    from flask import jsonify
+    return jsonify({"error": str(exc)}), code
+
+
+def is_hhmm(value):
+    """A real 24-hour HH:MM, as the slot engine compares them."""
+    return isinstance(value, str) and bool(HHMM.match(value))
+
+
+def is_date(value):
+    """A real calendar date in YYYY-MM-DD, not just the right shape."""
+    if not isinstance(value, str) or not YYYY_MM_DD.match(value):
+        return False
+    try:
+        _dt.date.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
+
+
 def camel(name):
     """`start_time` -> `startTime`. Anything already camel is left alone."""
     head, *rest = name.split("_")

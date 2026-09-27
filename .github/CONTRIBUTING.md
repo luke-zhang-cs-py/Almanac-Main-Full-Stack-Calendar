@@ -38,15 +38,20 @@ pytest -q
 python -m flake8 . --select=E9,F63,F7,F82
 ```
 
-303 tests, about 70 seconds. Both must be clean before a push.
+527 tests, about four minutes. Both must be clean before a push.
 
-Two things the suite guards that are easy to break by accident:
+Three things the suite guards that are easy to break by accident:
 
 - **Times are one language on the wire.** Timestamps are written and parsed
   through `database.TIMESTAMP_FORMAT`. Three different spellings of the same
   instant once made the reminder scan fire early.
 - **Nobody is mailed the same thing twice.** A unique index over `email_log`
   enforces it; if you add a notification, it needs a log key.
+- **A free check and its insert are one step.** Both booking paths take
+  `db.lock_for_write("appointments")` before `is_slot_free`, because the
+  unique index only covers bookings with the *same* start time; two
+  overlapping bookings with different starts get past it. A new booking
+  path needs the same lock.
 
 ## Conventions
 

@@ -22,12 +22,9 @@ from notify import coffee_notifications
 from core import database as db
 from accounts.auth import roles_required, token_required
 from domain.coffee_chats import InviteError
+from routes import fail
 
 bp = Blueprint("coffee_routes", __name__, url_prefix="/api/coffee")
-
-
-def _fail(exc, code=400):
-    return jsonify({"error": str(exc)}), code
 
 
 def _offering_view(invite):
@@ -74,7 +71,7 @@ def create_invite():
         ask = coffee_chats.InviteRequest.from_payload(request.get_json(silent=True))
         invite = coffee_chats.create_invite(g.current_user["id"], ask)
     except InviteError as exc:
-        return _fail(exc)
+        return fail(exc)
 
     # Created first, mailed second, on purpose: a mail failure must not lose
     # the invite. The host can resend from the dashboard.
@@ -100,11 +97,20 @@ def list_invites():
 def nudge(invite_id):
     invite = coffee_chats.get_invite(invite_id)
     if not invite or invite["host_id"] != g.current_user["id"]:
-        return _fail("Invite not found.", 404)
+        return fail("Invite not found.", 404)
     if not coffee_chats.is_open(invite):
-        return _fail("That invite is no longer open.")
+        return fail("That invite is no longer open.")
+    # The cap applied only to the automatic sweep: this button would send a
+    # third, a fourth, as many as it was pressed. And it sent first and
+    # counted after, so a double-click mailed twice. It now claims the nudge
+    # the way send_due_nudges does, and only the winner sends.
+    if invite["nudge_count"] >= coffee_chats.MAX_NUDGES:
+        return fail(f"They have already been followed up "
+                    f"{coffee_chats.MAX_NUDGES} times.", 409)
+    if not coffee_chats.record_nudge(
+            invite_id, expected_nudge_count=invite["nudge_count"]):
+        return fail("That invite was just followed up.", 409)
     coffee_notifications.send_nudge(invite_id)
-    coffee_chats.record_nudge(invite_id)
     return jsonify({"invite": coffee_chats.host_view(coffee_chats.get_invite(invite_id))})
 
 
@@ -115,7 +121,7 @@ def revoke(invite_id):
     try:
         invite = coffee_chats.revoke(invite_id, g.current_user["id"])
     except InviteError as exc:
-        return _fail(exc, 404 if "not found" in str(exc).lower() else 400)
+        return fail(exc, 404 if "not found" in str(exc).lower() else 400)
     return jsonify({"invite": coffee_chats.host_view(invite)})
 
 
@@ -139,11 +145,11 @@ def view_invite(token):
     """
     invite = coffee_chats.get_by_token(token)
     if not invite:
-        return _fail("This invite link is not valid.", 404)
+        return fail("This invite link is not valid.", 404)
 
     host = db.query("SELECT * FROM users WHERE id = ?", (invite["host_id"],), one=True)
     if not host:
-        return _fail("This invite is no longer available.", 404)
+        return fail("This invite is no longer available.", 404)
 
     if coffee_chats.is_open(invite):
         invite = coffee_chats.mark_viewed(invite)
@@ -169,8 +175,8 @@ def book(token):
     except InviteError as exc:
         # 409 for a slot that was taken while the page was open: it is a
         # conflict the guest can resolve by picking again, not a bad request.
-        taken = "took that slot" in str(exc)
-        return _fail(exc, 409 if taken else 400)
+        taken = str(exc) == coffee_chats.TAKEN
+        return fail(exc, 409 if taken else 400)
 
     # The guest gets the standard confirmation, because from their side this is
     # simply a booking. The host gets the coffee-specific one instead of the
@@ -195,6 +201,6 @@ def decline(token):
     try:
         invite = coffee_chats.decline(token, body.get("reason"))
     except InviteError as exc:
-        return _fail(exc)
+        return fail(exc)
     coffee_notifications.notify_declined(invite["id"])
     return jsonify({"declined": True})

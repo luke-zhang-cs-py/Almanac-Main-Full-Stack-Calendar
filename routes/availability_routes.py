@@ -9,19 +9,14 @@ on every booking, so this is where the times have to be checked. A row that
 gets past this point is one the slot engine has to cope with forever.
 """
 
-import re
-
 from flask import Blueprint, g, jsonify, request
 
 from core import database as db
 from accounts.auth import roles_required, token_required
-from routes import camel_keys
+from routes import HHMM, camel_keys, is_date
 from domain.calendar_logic import get_free_slots
 
 bp = Blueprint("availability_routes", __name__, url_prefix="/api")
-
-HHMM = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
-YYYY_MM_DD = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 # A slot has to be long enough to be a real appointment and short enough to
 # fit in a day. Zero is the one that matters: calendar_logic walks a window
@@ -154,7 +149,7 @@ def _block_problem(date_str, start_time, end_time):
     """The first thing wrong with a blocked date, or None."""
     if not date_str:
         return "date (YYYY-MM-DD) is required"
-    if not YYYY_MM_DD.match(date_str):
+    if not is_date(date_str):
         return "date must be in YYYY-MM-DD format"
     if start_time is None and end_time is None:
         return None                       # a whole day off

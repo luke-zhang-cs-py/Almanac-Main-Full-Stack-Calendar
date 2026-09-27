@@ -15,12 +15,9 @@ from core import database as db
 from domain import offerings
 from accounts.auth import roles_required, token_required
 from domain.offerings import OfferingError
+from routes import fail
 
 bp = Blueprint("offering_routes", __name__, url_prefix="/api")
-
-
-def _fail(exc, code=400):
-    return jsonify({"error": str(exc)}), code
 
 
 # ------------------------------------------------------------------ public
@@ -32,7 +29,7 @@ def public_offerings(provider_id):
         "SELECT id, name, specialty FROM users WHERE id = ? AND role = 'provider'",
         (provider_id,), one=True)
     if not provider:
-        return _fail("Provider not found.", 404)
+        return fail("Provider not found.", 404)
 
     groups = offerings.grouped_for_provider(provider_id)
     flat = [o for grp in groups for o in grp["offerings"]]
@@ -95,7 +92,7 @@ def create_offering():
         draft = offerings.OfferingDraft.from_payload(request.get_json(silent=True))
         new_id = offerings.create(g.current_user["id"], draft)
     except OfferingError as exc:
-        return _fail(exc)
+        return fail(exc)
     return jsonify({"offering": offerings.owner_view(offerings.get(new_id))}), 201
 
 
@@ -118,11 +115,11 @@ def update_offering(offering_id):
             try:
                 fields[dest] = int(body[src])
             except (TypeError, ValueError):
-                return _fail(f"{src} must be a whole number.")
+                return fail(f"{src} must be a whole number.")
     try:
         updated = offerings.update(offering_id, g.current_user["id"], **fields)
     except OfferingError as exc:
-        return _fail(exc, 404 if "not found" in str(exc).lower() else 400)
+        return fail(exc, 404 if "not found" in str(exc).lower() else 400)
     return jsonify({"offering": offerings.owner_view(updated)})
 
 
@@ -134,5 +131,5 @@ def remove_offering(offering_id):
     try:
         offering = offerings.deactivate(offering_id, g.current_user["id"])
     except OfferingError as exc:
-        return _fail(exc, 404)
+        return fail(exc, 404)
     return jsonify({"offering": offerings.owner_view(offering)})

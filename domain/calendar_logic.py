@@ -201,6 +201,6 @@ def slot_starts_for(provider_id: int, date_str: str, duration_min: int):
         start = slot["start"]
         total = _to_minutes(start) + duration_min
         end = _to_hhmm(total)
-        if total <= 24 * 60 and is_slot_free(provider_id, date_str, start, end):
+        if total <= MINUTES_IN_A_DAY and is_slot_free(provider_id, date_str, start, end):
             out.append({"start": start, "end": end})
     return out

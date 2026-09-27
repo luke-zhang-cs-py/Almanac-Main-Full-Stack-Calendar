@@ -1,14 +1,12 @@
-import re
-
 from flask import Blueprint, g, jsonify, request
 
 from core import database as db
 from notify import notifications
 from accounts.auth import create_token, hash_password, token_required, verify_password
+from routes import EMAIL_RE
 
 bp = Blueprint("auth_routes", __name__, url_prefix="/api/auth")
 
-EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 ALLOWED_SELF_SIGNUP_ROLES = ("client", "provider")
 
 # Long enough to be worth hashing. Not a policy about symbols and capitals --

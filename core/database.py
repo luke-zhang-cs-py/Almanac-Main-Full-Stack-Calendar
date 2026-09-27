@@ -25,6 +25,16 @@ from flask import g
 from core.config import Config
 
 _IS_POSTGRES = Config.DATABASE_URL.startswith(("postgres://", "postgresql://"))
+
+# What a unique index refusing a row looks like, on whichever driver is
+# installed. Built once here rather than copied into every module that
+# catches one: those copies had to be kept in step by hand.
+try:
+    import psycopg2
+
+    INTEGRITY_ERRORS = (sqlite3.IntegrityError, psycopg2.IntegrityError)
+except ImportError:
+    INTEGRITY_ERRORS = (sqlite3.IntegrityError,)
 _local = threading.local()
 
 # One timestamp format, one timezone, everywhere.
@@ -396,6 +406,11 @@ CREATE INDEX IF NOT EXISTS idx_schedule_due
 """
 
 SCHEMA_POSTGRES = """
+-- Column types match the SQLite copy exactly. is_active was BOOLEAN here,
+-- and every query says `is_active = 1`, which Postgres refuses outright
+-- (boolean = integer), so the provider list and every booking failed on the
+-- one backend CI never runs. sent_at was TIMESTAMP, which came back as a
+-- datetime object rather than the TIMESTAMP_FORMAT string.
 CREATE TABLE IF NOT EXISTS users (
     id            SERIAL PRIMARY KEY,
     name          TEXT NOT NULL,
@@ -403,7 +418,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash TEXT NOT NULL,
     role          TEXT NOT NULL CHECK (role IN ('admin', 'provider', 'client')),
     specialty     TEXT,
-    is_active     BOOLEAN NOT NULL DEFAULT TRUE,
+    is_active     INTEGER NOT NULL DEFAULT 1,
     created_at    TEXT NOT NULL DEFAULT (to_char(now(), 'YYYY-MM-DD"T"HH24:MI:SS'))
 );
 
@@ -453,7 +468,7 @@ CREATE TABLE IF NOT EXISTS email_log (
                    CHECK (status IN ('queued', 'sent', 'failed')),
     error          TEXT,
     created_at     TEXT NOT NULL DEFAULT (to_char(now(), 'YYYY-MM-DD"T"HH24:MI:SS')),
-    sent_at        TIMESTAMP
+    sent_at        TEXT
 );
 
 -- Doubles as the de-duplication rule: one message of each kind per person per

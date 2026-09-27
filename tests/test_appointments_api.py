@@ -268,3 +268,104 @@ def test_lifting_someone_elses_block_is_404(client, provider, booking):
     res = client.delete(f"/api/availability/mine/block/{made}",
                         headers={"Authorization": f"Bearer {token}"})
     assert res.status_code == 404
+
+
+# ------------------------------------------------- found by the second audit
+
+
+@pytest.mark.parametrize("field, value", [
+    ("date", "next tuesday"), ("date", "2026-02-30"), ("date", 20260930),
+    ("start_time", 900), ("end_time", "9:30"), ("start_time", "25:00"),
+])
+def test_a_malformed_booking_is_400_not_500(client, provider, booking, field, value):
+    """Nothing checked these before the slot engine did: a date that is not
+    a date raised ValueError inside get_free_slots, and a time that is not a
+    string reached a `<` against one. Both were a 500."""
+    body = {"provider_id": provider["id"], "date": a_weekday(),
+            "start_time": "09:00", "end_time": "09:30"}
+    body[field] = value
+    res = client.post("/api/appointments", headers=booking["auth"], json=body)
+    assert res.status_code == 400, res.get_json()
+
+
+def test_overlapping_bookings_cannot_both_win_a_race(client, provider, booking,
+                                                    monkeypatch):
+    """Two requests for 09:00-10:00 and 09:30-10:00 have different starts, so
+    the unique index does not stop them. This lets a rival commit its
+    overlapping booking in the gap between this request's free check and its
+    insert -- the gap there used to be. With the check and the insert under
+    one write lock, the rival cannot get in until this request is done."""
+    import sqlite3
+    from core import database as db
+    from core.config import Config
+    from routes import appointment_routes
+
+    day = a_weekday()
+    rival_client = booking["user"]["id"]
+    real = appointment_routes.is_slot_free
+
+    def check_then_rival_books(*args):
+        verdict = real(*args)
+        rival = sqlite3.connect(Config.DATABASE_URL.replace("sqlite:///", "", 1),
+                                timeout=0.2)
+        try:
+            rival.execute(
+                "INSERT INTO appointments (provider_id, client_id, date, "
+                "start_time, end_time) VALUES (?, ?, ?, '09:30', '10:00')",
+                (provider["id"], rival_client, day))
+            rival.commit()
+        except sqlite3.OperationalError:
+            pass                       # locked out, which is the point
+        finally:
+            rival.close()
+        return verdict
+
+    monkeypatch.setattr(appointment_routes, "is_slot_free", check_then_rival_books)
+    client.post("/api/appointments", headers=booking["auth"], json={
+        "provider_id": provider["id"], "date": day,
+        "start_time": "09:00", "end_time": "10:00"})
+
+    rows = db.query("SELECT start_time, end_time FROM appointments WHERE "
+                    "provider_id = ? AND date = ? AND status = 'confirmed'",
+                    (provider["id"], day))
+    assert len(rows) == 1, rows
+
+
+@pytest.mark.parametrize("action, by, lost_to", [
+    ("cancel", "booking", "completed"),
+    ("complete", "provider", "cancelled"),
+])
+def test_cancel_and_complete_cannot_both_win(client, provider, booking, monkeypatch,
+                                             action, by, lost_to):
+    """The status used to be read, then written unconditionally. A cancel
+    and a complete arriving together both saw "confirmed", both wrote, and
+    both mailed: the client was told it was cancelled and thanked for coming.
+    Here the other side's write lands between this request's read and its
+    write, which is that race with the timing fixed."""
+    from core import database as db
+    from routes import appointment_routes
+
+    stale = appointment_routes._load(booking["id"])
+    db.execute("UPDATE appointments SET status = ? WHERE id = ?",
+               (lost_to, booking["id"]))
+    db.execute("DELETE FROM email_log")
+    reads = iter([stale])
+    real_load = appointment_routes._load
+    monkeypatch.setattr(appointment_routes, "_load",
+                        lambda appt_id: next(reads, None) or real_load(appt_id))
+
+    auth = booking["auth"] if by == "booking" else provider["auth"]
+    res = client.post(f"/api/appointments/{booking['id']}/{action}", headers=auth)
+
+    assert res.status_code == 409
+    assert lost_to in res.get_json()["error"]
+    assert appointment_routes._load(booking["id"])["status"] == lost_to
+    assert db.query("SELECT * FROM email_log") == []
+
+
+def test_a_past_date_has_no_slots_even_with_hours_set(client, provider, booking):
+    """The provider works every day, so only the date being gone can empty
+    it. This branch used to fall through and call every past slot free."""
+    past = (datetime.date.today() - datetime.timedelta(days=7)).isoformat()
+    _, slots = slots_for(client, provider, booking["auth"], past)
+    assert slots == []

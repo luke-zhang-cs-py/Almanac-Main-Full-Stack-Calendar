@@ -31,8 +31,9 @@ The timezone rule
 The planner stores a time as written with a timezone *label* beside it. For
 nearly everything that label is the local one and the stored time is the
 local instant. For anything else -- a fixture at "11:30 EST" -- it is not,
-and reminding at that wall-clock time locally would be hours out. Rather
-than infer an offset from a two-letter label, those rows are imported and
+and reminding at that wall-clock time locally would be hours out. "Local"
+means the label's UTC offset is this server's on that date. Rather than
+convert between clocks, rows that fail it are imported and
 shown but never reminded about: `local_clock` is decided here, once, at
 import. A reminder at a demonstrably wrong time is worse than none.
 
@@ -65,39 +66,21 @@ class ScheduleError(Exception):
     """Something the caller can fix: not a planner export, a bad date."""
 
 
-def _last_sunday(year, month):
-    """The date of the last Sunday in (year, month).
+# Minutes east of UTC for each label the planner writes. An offset rather
+# than a zone name, so the comparison below needs no tz database and no
+# assumption about where this server is.
+ZONE_OFFSETS = {"GMT": 0, "BST": 60, "EST": -300, "EDT": -240}
 
-    The UK clock change rule itself: back on the last Sunday of October,
-    forward on the last Sunday of March, every year, forever. Walking
-    backwards from the first of the *next* month is simpler than counting
-    forward from the day this one has 28-31 of, and needs no calendar table.
+
+def _server_offset_minutes(date_iso):
+    """This machine's own UTC offset on that date, in minutes.
+
+    Taken at noon, which is never inside a clock change. The reminder sweep
+    compares stored times against datetime.now(), which is this machine's
+    wall clock, so this machine's offset is what a label has to match.
     """
-    first_of_next_month = (
-        dt.date(year + 1, 1, 1) if month == 12 else dt.date(year, month + 1, 1)
-    )
-    last_day = first_of_next_month - dt.timedelta(days=1)
-    # date.weekday(): Monday=0 ... Sunday=6. Walking back that far from
-    # `last_day` always lands on a Sunday, whatever day of the week
-    # `last_day` itself falls on, including when it already is one.
-    return last_day - dt.timedelta(days=(last_day.weekday() - 6) % 7)
-
-
-def uk_zone(date_iso):
-    """"BST" or "GMT" for a date, by the actual rule rather than a copied-in
-    pair of dates.
-
-    This used to be two literal dates -- "British Summer Time ran to 25
-    October 2026 and resumes 28 March 2027" -- good for exactly one winter
-    and silently wrong for every one after it, since nothing here re-derives
-    them from a calendar. The rule that produces those two dates does not
-    change year to year, so it is computed for whichever year the date
-    itself falls in instead.
-    """
-    date = dt.datetime.strptime(date_iso, DATE_FORMAT).date()
-    bst_starts = _last_sunday(date.year, 3)
-    bst_ends = _last_sunday(date.year, 10)
-    return "BST" if bst_starts <= date < bst_ends else "GMT"
+    noon = dt.datetime.strptime(date_iso, DATE_FORMAT).replace(hour=12)
+    return int(noon.astimezone().utcoffset().total_seconds() // 60)
 
 
 def is_local_clock(date_iso, label):
@@ -105,8 +88,20 @@ def is_local_clock(date_iso, label):
 
     No label means the planner never claimed otherwise, which is the common
     case and is treated as local.
+
+    This used to compare the label with the UK's zone for that date -- BST
+    or GMT by the last-Sunday rule -- which is only the local clock on a
+    server in the UK. On one in Toronto a "10:00 BST" lecture was marked
+    local and reminded about at 10:00 Eastern, five hours after it started,
+    and a "10:00 EDT" one was never reminded about at all. The label is now
+    held against the server's actual UTC offset on that date, which keeps
+    every answer the same in the UK (BST in summer, GMT in winter) and gives
+    the right one anywhere else. A label it does not know is not local.
     """
-    return not label or label == uk_zone(date_iso)
+    if not label:
+        return True
+    offset = ZONE_OFFSETS.get(label)
+    return offset is not None and offset == _server_offset_minutes(date_iso)
 
 
 def _clean_time(value):

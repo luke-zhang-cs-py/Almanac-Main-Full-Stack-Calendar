@@ -310,8 +310,10 @@ def _find_or_create_guest(email, name):
 
     appointments.client_id is a real foreign key, so a guest needs a row. They
     get one with an unusable password hash: reachable by email, bookable,
-    unable to log in. If they later register properly, the address already
-    exists and their history comes with them.
+    unable to log in. Registering later with the same address is refused as
+    a duplicate (409) -- there is no claim-your-account flow, and adding one
+    without verifying the address would hand a guest's history to anybody
+    who typed their email.
     """
     user = db.query("SELECT * FROM users WHERE email = ?", (email,), one=True)
     if user:
@@ -357,21 +359,52 @@ def _parse_start(date_str, start_time):
     return begin
 
 
+TAKEN = "Someone just took that slot. Please pick another."
+
+
+def _claim(invite):
+    """Move an open invite to booked, once. Returns whether this caller won.
+
+    A token authorises one booking. Checking the status and writing it later
+    let two requests on the same link -- a double-submit, or two tabs -- both
+    see "sent", both insert an appointment at different times, and leave the
+    host holding two slots for one guest with the invite pointing at only
+    one of them. The status move is the claim; whoever loses it books
+    nothing.
+    """
+    return db.execute_rowcount(
+        """UPDATE coffee_invites SET status = 'booked', responded_at = ?
+           WHERE id = ? AND status = ?""",
+        (_iso(_now()), invite["id"], invite["status"])) > 0
+
+
+def _release(invite):
+    """Undo a claim whose booking did not go through."""
+    db.execute(
+        """UPDATE coffee_invites SET status = ?, responded_at = NULL
+           WHERE id = ? AND status = 'booked' AND appointment_id IS NULL""",
+        (invite["status"], invite["id"]))
+
+
 def book(token, date_str, start_time, guest_name=None, note=None):
     """Take a slot against an invite. Returns (invite, appointment_id).
 
     Everything that can be wrong is checked before anything is written: an
     invite that is spent or expired, a malformed date, a slot that somebody
-    else took while this page was open. The last one is the realistic race,
-    and the unique index on appointments is the backstop if the check and the
-    insert are separated by bad luck.
+    else took while this page was open. The invite is then claimed, and the
+    free check and the insert run under the appointments write lock, so
+    neither a second use of the link nor an overlapping booking on the
+    host's calendar can slip in between the check and the write.
     """
     invite = _open_invite_for(token)
     begin = _parse_start(date_str, start_time)
+    # strptime reads "9:00" as nine o'clock; the slot engine compares
+    # zero-padded strings, so it is normalised before anything compares it.
+    start_time = begin.strftime("%H:%M")
     end_time = (begin + timedelta(minutes=invite["duration_min"])).strftime("%H:%M")
 
     if not is_slot_free(invite["host_id"], date_str, start_time, end_time):
-        raise InviteError("Someone just took that slot. Please pick another.")
+        raise InviteError(TAKEN)
 
     guest = _find_or_create_guest(invite["guest_email"],
                                   guest_name or invite["guest_name"])
@@ -381,24 +414,32 @@ def book(token, date_str, start_time, guest_name=None, note=None):
     if note:
         notes += f"\n\nFrom {guest['name']}: {note.strip()}"
 
+    if not _claim(invite):
+        raise InviteError("This invite has already been used to book a time.")
+
+    conn = db.lock_for_write("appointments")
     try:
+        if not is_slot_free(invite["host_id"], date_str, start_time, end_time):
+            raise InviteError(TAKEN)
         appointment_id = db.insert(
             """INSERT INTO appointments
                (provider_id, client_id, date, start_time, end_time, status, notes)
                VALUES (?, ?, ?, ?, ?, 'confirmed', ?)""",
-            (invite["host_id"], guest["id"], date_str, start_time, end_time, notes))
-    except Exception as exc:                       # unique-constraint backstop
-        db.rollback()
+            (invite["host_id"], guest["id"], date_str, start_time, end_time, notes),
+            conn=conn)
+    except Exception as exc:                       # taken, or the unique index
+        db.rollback(conn=conn)
+        _release(invite)
+        if isinstance(exc, InviteError):
+            raise
         log.info("coffee booking lost a race: %s", exc)
-        raise InviteError("Someone just took that slot. Please pick another.")
+        raise InviteError(TAKEN)
 
     db.execute(
         """UPDATE coffee_invites
-           SET status = 'booked', appointment_id = ?, responded_at = ?,
-               guest_name = COALESCE(?, guest_name)
+           SET appointment_id = ?, guest_name = COALESCE(?, guest_name)
            WHERE id = ?""",
-        (appointment_id, _iso(_now()), (guest_name or "").strip() or None,
-         invite["id"]))
+        (appointment_id, (guest_name or "").strip() or None, invite["id"]))
     return get_invite(invite["id"]), appointment_id
 
 

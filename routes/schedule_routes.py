@@ -18,14 +18,10 @@ from flask import Blueprint, g, jsonify, request
 
 from domain import schedule
 from accounts.auth import token_required
-from routes import camel_keys
+from routes import camel_keys, fail
 from domain.schedule import ScheduleError
 
 bp = Blueprint("schedule_routes", __name__, url_prefix="/api")
-
-
-def _fail(exc, code=400):
-    return jsonify({"error": str(exc)}), code
 
 
 @bp.get("/schedule")
@@ -55,7 +51,7 @@ def import_planner():
         result = schedule.import_payload(g.current_user["id"],
                                          request.get_json(silent=True))
     except ScheduleError as exc:
-        return _fail(exc)
+        return fail(exc)
     return jsonify(camel_keys({
         "imported": result,
         "events": [schedule.view(row)
@@ -69,7 +65,7 @@ def remove_event(event_id):
     try:
         schedule.delete(event_id, g.current_user["id"])
     except ScheduleError as exc:
-        return _fail(exc, 404)
+        return fail(exc, 404)
     return jsonify({"deleted": event_id})
 
 

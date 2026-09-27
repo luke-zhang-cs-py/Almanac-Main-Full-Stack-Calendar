@@ -1,15 +1,15 @@
-import re
-
 from flask import Blueprint, current_app, g, jsonify, request
 
 from core import database as db
 from notify import notifications
 from accounts.auth import roles_required, token_required
-from routes import camel_keys
+from routes import EMAIL_RE, camel_keys
 
 bp = Blueprint("email_routes", __name__, url_prefix="/api/admin/emails")
 
-EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+DEFAULT_LOG_LIMIT = 100
+MAX_LOG_LIMIT = 500
+
 
 
 @bp.get("")
@@ -19,9 +19,9 @@ def list_emails():
     """Delivery log -- what the platform mailed, to whom, and whether it landed."""
     status = request.args.get("status")
     try:
-        limit = min(int(request.args.get("limit", "100")), 500)
+        limit = min(int(request.args.get("limit", DEFAULT_LOG_LIMIT)), MAX_LOG_LIMIT)
     except ValueError:
-        limit = 100
+        limit = DEFAULT_LOG_LIMIT
 
     sql = (
         "SELECT e.id, e.kind, e.recipient, e.subject, e.status, e.error, "

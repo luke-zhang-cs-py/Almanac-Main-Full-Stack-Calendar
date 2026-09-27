@@ -19,13 +19,9 @@ from flask import Blueprint, g, jsonify, request
 from domain import pounds
 from accounts.auth import token_required
 from domain.pounds import PoundError
-from routes import camel_keys
+from routes import camel_keys, fail
 
 bp = Blueprint("pound_routes", __name__, url_prefix="/api")
-
-
-def _fail(exc, code=400):
-    return jsonify({"error": str(exc)}), code
 
 
 # --------------------------------------------------------------- the ledger
@@ -46,7 +42,7 @@ def record_conversion():
         draft = pounds.ConversionDraft.from_payload(request.get_json(silent=True))
         new_id = pounds.create(g.current_user["id"], draft)
     except PoundError as exc:
-        return _fail(exc)
+        return fail(exc)
     return jsonify({"conversion": camel_keys(pounds.view(pounds.get(new_id))),
                     "summary": camel_keys(
                         pounds.summary(g.current_user["id"]))}), 201
@@ -58,7 +54,7 @@ def remove_conversion(conversion_id):
     try:
         pounds.delete(conversion_id, g.current_user["id"])
     except PoundError as exc:
-        return _fail(exc, 404)
+        return fail(exc, 404)
     return jsonify({"deleted": conversion_id,
                     "summary": camel_keys(pounds.summary(g.current_user["id"]))})
 
@@ -78,15 +74,15 @@ def quote():
     try:
         cad_cents = int(request.args.get("cadCents") or 0)
     except (TypeError, ValueError):
-        return _fail(PoundError("The amount must be a whole number of cents."))
+        return fail(PoundError("The amount must be a whole number of cents."))
     if cad_cents <= 0:
-        return _fail(PoundError("A conversion needs an amount."))
+        return fail(PoundError("A conversion needs an amount."))
 
     on = request.args.get("on") or ""
     try:
         got = pounds.quote(cad_cents, on)
     except PoundError as exc:
-        return _fail(exc)
+        return fail(exc)
 
     left = pounds.remaining(g.current_user["id"])
     got["fits"] = got["pence"] <= left

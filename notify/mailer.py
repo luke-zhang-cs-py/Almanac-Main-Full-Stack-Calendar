@@ -25,7 +25,6 @@ coffee_notifications.py; how they are laid out is email_render.py.
 import logging
 import queue
 import smtplib
-import sqlite3
 import sys
 import threading
 import time
@@ -38,13 +37,6 @@ from flask import current_app
 from core import database as db
 
 log = logging.getLogger("almanac.mail")
-
-try:
-    import psycopg2
-
-    INTEGRITY_ERRORS = (sqlite3.IntegrityError, psycopg2.IntegrityError)
-except ImportError:
-    INTEGRITY_ERRORS = (sqlite3.IntegrityError,)
 
 
 @dataclass
@@ -150,7 +142,7 @@ def _claim(message):
             (message.kind, message.to, message.subject,
              message.appointment_id, message.user_id),
         )
-    except INTEGRITY_ERRORS:
+    except db.INTEGRITY_ERRORS:
         db.rollback()
 
     existing = db.query(

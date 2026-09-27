@@ -187,3 +187,125 @@ def test_declining_something_already_booked(client, provider, ctx):
     with pytest.raises(InviteError) as raised:
         coffee_chats.decline(invite["token"])
     assert "already been used" in str(raised.value)
+
+
+# ------------------------------------------------- found by the second audit
+
+
+def first_open_day(invite):
+    slots = coffee_chats.available_slots(coffee_chats.get_invite(invite["id"]))
+    return next(d for d in slots if len(d["slots"]) > 4)
+
+
+def test_one_link_books_one_time_even_when_two_requests_race(
+        client, provider, ctx, monkeypatch):
+    """A token authorises one booking. Two requests on the same link -- a
+    double-submit, two tabs -- used to both read the invite as open before
+    either had written, and both went on to book, at different times, so the
+    host held two slots for one guest and the invite named only one. Here
+    the second request is handed the invite as it was before the first one
+    booked, which is that race with the timing fixed."""
+    from core import database as db
+
+    invite = an_invite(client, provider, email="twice@test.local")
+    day = first_open_day(invite)
+    stale = coffee_chats.get_by_token(invite["token"])
+
+    coffee_chats.book(invite["token"], day["date"], day["slots"][0]["start"])
+    monkeypatch.setattr(coffee_chats, "_open_invite_for", lambda token: stale)
+    with pytest.raises(InviteError) as raised:
+        coffee_chats.book(invite["token"], day["date"], day["slots"][4]["start"])
+    assert "already been used" in str(raised.value)
+
+    booked = db.query("SELECT id FROM appointments WHERE provider_id = ? "
+                      "AND status = 'confirmed'", (provider["id"],))
+    assert len(booked) == 1
+
+
+def test_a_lost_slot_leaves_the_link_usable(client, provider, ctx, monkeypatch):
+    """The invite is claimed before the insert. When the insert then loses
+    to the unique index, the claim is given back, or the guest's one link
+    would be spent on a booking that never happened."""
+    from core import database as db
+
+    invite = an_invite(client, provider, email="retry@test.local")
+    day = first_open_day(invite)
+    real_insert = db.insert
+
+    def collide(sql, params=(), conn=None):
+        if "INSERT INTO appointments" in sql:
+            raise RuntimeError("UNIQUE constraint failed: uniq_active_slot")
+        return real_insert(sql, params, conn=conn)
+
+    monkeypatch.setattr(db, "insert", collide)
+    with pytest.raises(InviteError):
+        coffee_chats.book(invite["token"], day["date"], day["slots"][0]["start"])
+    monkeypatch.setattr(db, "insert", real_insert)
+
+    assert coffee_chats.get_invite(invite["id"])["status"] == "sent"
+    _row, appointment_id = coffee_chats.book(
+        invite["token"], day["date"], day["slots"][1]["start"])
+    assert appointment_id
+
+
+def test_an_unpadded_hour_books_rather_than_being_told_it_was_taken(
+        client, provider, ctx):
+    """strptime reads "9:15" as a time, and the slot engine compares padded
+    strings, so "9:15" matched no slot and the guest was told somebody had
+    just taken a time nobody had."""
+    invite = an_invite(client, provider, email="unpadded@test.local")
+    day = next(d for d in coffee_chats.available_slots(
+        coffee_chats.get_invite(invite["id"])) if any(
+            s["start"] == "09:15" for s in d["slots"]))
+    _row, appointment_id = coffee_chats.book(invite["token"], day["date"], "9:15")
+    from core import database as db
+    got = db.query("SELECT start_time FROM appointments WHERE id = ?",
+                   (appointment_id,), one=True)
+    assert got["start_time"] == "09:15"
+
+
+def test_a_guest_cannot_overlap_a_booking_made_during_their_check(
+        client, provider, ctx, monkeypatch):
+    """The logged-in path's overlap race, on the guest path. A rival books
+    09:30-10:00 right after the guest's free check for 09:00-10:00 passes;
+    different starts, so the unique index lets both in. The check is now
+    repeated under the write lock, and the rival cannot write while it is
+    held."""
+    import sqlite3
+    from core import database as db
+    from core.config import Config
+    from tests.conftest import register
+
+    invite = an_invite(client, provider, email="overlap@test.local", duration=60)
+    day = next(d for d in coffee_chats.available_slots(
+        coffee_chats.get_invite(invite["id"])) if any(
+            s["start"] == "09:00" for s in d["slots"]))
+    _token, rival_user = register(client, "rival-guest@test.local")
+    real = coffee_chats.is_slot_free
+
+    def check_then_rival_books(*args):
+        verdict = real(*args)
+        rival = sqlite3.connect(Config.DATABASE_URL.replace("sqlite:///", "", 1),
+                                timeout=0.2)
+        try:
+            rival.execute(
+                "INSERT INTO appointments (provider_id, client_id, date, "
+                "start_time, end_time) VALUES (?, ?, ?, '09:30', '10:00')",
+                (provider["id"], rival_user["id"], day["date"]))
+            rival.commit()
+        except sqlite3.Error:
+            pass                       # locked out, or already in
+        finally:
+            rival.close()
+        return verdict
+
+    monkeypatch.setattr(coffee_chats, "is_slot_free", check_then_rival_books)
+    try:
+        coffee_chats.book(invite["token"], day["date"], "09:00")
+    except InviteError:
+        pass
+
+    rows = db.query("SELECT start_time FROM appointments WHERE provider_id = ? "
+                    "AND date = ? AND status = 'confirmed'",
+                    (provider["id"], day["date"]))
+    assert len(rows) == 1, rows

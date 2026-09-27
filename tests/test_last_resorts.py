@@ -337,7 +337,7 @@ def test_two_bookings_that_pass_the_free_check_still_cannot_collide(
 
 
 def test_a_postgres_integrity_error_is_caught_too(monkeypatch):
-    """Both modules build their INTEGRITY_ERRORS tuple at import, and the
+    """database builds the INTEGRITY_ERRORS tuple at import, and the
     psycopg2 half has never been built here because the driver is not
     installed. If that tuple were wrong, a Postgres deployment would answer a
     double-booking with a 500 instead of a 409, and nothing in a SQLite run
@@ -365,10 +365,9 @@ def test_a_postgres_integrity_error_is_caught_too(monkeypatch):
     monkeypatch.setitem(sys.modules, "psycopg2", fake)
     monkeypatch.setitem(sys.modules, "psycopg2.extras", extras)
 
-    from notify import mailer
-    from routes import appointment_routes
+    from core import database
 
-    for module in (mailer, appointment_routes):
+    for module in (database,):
         with _io.open(module.__file__, encoding="utf-8") as handle:
             source = handle.read()
         namespace = {"__name__": module.__name__ + "_probe",

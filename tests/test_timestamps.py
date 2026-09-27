@@ -131,3 +131,39 @@ def test_a_message_is_never_sent_before_it_was_queued(ctx, provider):
 def test_now_stamp_is_the_format_everything_else_uses(ctx):
     parses(db.now_stamp())
     assert db.now_stamp()[10] == "T"
+
+
+# ------------------------------------------------- found by the second audit
+
+
+def column_types(schema):
+    """{table: {column: first type word}} out of a CREATE TABLE script.
+
+    SERIAL is Postgres's spelling of an autoincrementing INTEGER, so it
+    reads as INTEGER here; nothing else is translated.
+    """
+    import re
+    tables = {}
+    for name, body in re.findall(r"CREATE TABLE IF NOT EXISTS (\w+) \((.*?)\n\);",
+                                 schema, re.S):
+        cols = {}
+        for line in body.splitlines():
+            found = re.match(r"\s+([a-z_]+)\s+([A-Z]+)", line)
+            if found and found.group(1) not in ("check",):
+                kind = found.group(2)
+                cols[found.group(1)] = "INTEGER" if kind == "SERIAL" else kind
+        tables[name] = cols
+    return tables
+
+
+def test_both_backends_declare_every_column_the_same_type():
+    """Postgres had users.is_active as BOOLEAN while every query in the app
+    says `is_active = 1`. Postgres refuses that comparison outright, so the
+    provider list and every booking failed on the backend CI never runs.
+    email_log.sent_at was TIMESTAMP there and TEXT here -- a datetime object
+    on one backend and a TIMESTAMP_FORMAT string on the other."""
+    sqlite, postgres = column_types(db.SCHEMA_SQLITE), column_types(db.SCHEMA_POSTGRES)
+    assert set(sqlite) == set(postgres)
+    assert len(sqlite) >= 9
+    for table in sqlite:
+        assert sqlite[table] == postgres[table], table

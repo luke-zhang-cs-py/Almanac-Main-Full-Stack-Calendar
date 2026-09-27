@@ -48,6 +48,27 @@ def a_class(id="term-1", time="10:00", end="11:00", title="MAT 1001 · Lecture",
     return row
 
 
+def a_server_in(offsets):
+    """Pin the server's UTC offset: summer and winter minutes east of UTC.
+
+    Summer is 29 March to 25 October 2026, the UK's own dates; the Eastern
+    change falls a few weeks either side, which none of these dates is near.
+    """
+    summer, winter = offsets
+    return lambda date_iso: (summer if "2026-03-29" <= date_iso < "2026-10-25"
+                             else winter)
+
+
+IN_THE_UK = (60, 0)
+IN_TORONTO = (-240, -300)
+
+
+@pytest.fixture
+def uk_server(monkeypatch):
+    monkeypatch.setattr(schedule, "_server_offset_minutes", a_server_in(IN_THE_UK),
+                        raising=False)
+
+
 def in_minutes(minutes):
     """A date and time that many minutes from now, planner-shaped."""
     at = dt.datetime.now() + dt.timedelta(minutes=minutes)
@@ -137,7 +158,8 @@ def test_anything_that_is_not_a_planner_export_is_refused(client, booking,
            "events" in got.get_json()["error"].lower()
 
 
-def test_a_class_on_another_clock_is_imported_but_flagged(client, booking):
+def test_a_class_on_another_clock_is_imported_but_flagged(client, booking,
+                                                          uk_server):
     """"11:30 EST" is not the local instant. It is kept and shown, because
     it is still on your timetable -- it is only reminders it is excluded
     from."""
@@ -148,9 +170,10 @@ def test_a_class_on_another_clock_is_imported_but_flagged(client, booking):
     assert body["events"][0]["localClock"] is False
 
 
-def test_the_uk_clock_change_decides_the_label(ctx):
-    """BST ran to 25 October 2026 and resumes 28 March 2027, so the same
-    label is local on one side of that and not the other."""
+def test_the_uk_clock_change_decides_the_label(ctx, uk_server):
+    """On a server in the UK, BST ran to 25 October 2026 and resumes 28
+    March 2027, so the same label is local on one side of that and not the
+    other."""
     assert schedule.is_local_clock("2026-09-21", "BST") is True
     assert schedule.is_local_clock("2026-09-21", "GMT") is False
     assert schedule.is_local_clock("2026-12-02", "GMT") is True
@@ -229,7 +252,8 @@ def test_a_class_already_under_way_is_not_chased(client, booking, ctx):
     assert notifications.send_schedule_reminders() == 0
 
 
-def test_a_class_on_another_clock_is_never_emailed(client, booking, ctx):
+def test_a_class_on_another_clock_is_never_emailed(client, booking, ctx,
+                                                   uk_server):
     """The stored time is not the local instant, so there is no moment this
     could be sent at that would be right."""
     from notify import notifications
@@ -307,3 +331,34 @@ def test_a_row_with_an_unreadable_time_still_gets_a_sentence(client, booking,
     assert notifications.send_schedule_reminders(now=now) == 1
     row = sent("schedule_soon")[0]
     assert "Odd class" in row["subject"]
+
+
+# ------------------------------------------------- found by the second audit
+
+
+def test_local_means_this_servers_clock_not_the_uks(ctx, monkeypatch):
+    """The label used to be held against the UK's zone for the date, which
+    is the local clock only on a server in the UK. On one in Toronto a
+    "10:00 BST" lecture was marked local and emailed about at 10:00 Eastern,
+    five hours after it began, and an "EDT" one was never emailed at all."""
+    monkeypatch.setattr(schedule, "_server_offset_minutes",
+                        a_server_in(IN_TORONTO), raising=False)
+    assert schedule.is_local_clock("2026-09-21", "BST") is False
+    assert schedule.is_local_clock("2026-09-21", "EDT") is True
+    assert schedule.is_local_clock("2026-12-02", "EST") is True
+    assert schedule.is_local_clock("2026-12-02", "GMT") is False
+    assert schedule.is_local_clock("2026-09-21", None) is True
+
+
+def test_a_label_nobody_maps_is_not_local(ctx, uk_server):
+    assert schedule.is_local_clock("2026-09-21", "CEST") is False
+
+
+def test_the_servers_offset_is_this_machines(ctx):
+    """Read off the real clock, not assumed: whatever this machine is set
+    to, the answer is its own offset on that date."""
+    import datetime as real_dt
+    for date_iso in ("2026-01-15", "2026-07-15"):
+        noon = real_dt.datetime.fromisoformat(date_iso + "T12:00")
+        want = noon.astimezone().utcoffset().total_seconds() // 60
+        assert schedule._server_offset_minutes(date_iso) == want
