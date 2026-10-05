@@ -1,5 +1,112 @@
 # Code audit
 
+## 2026-10-05: third pass
+
+Baseline **527 passed, 0 failed**. After: **537 passed, 0 failed** (10 new
+tests). flake8 (`E9,F63,F7,F82,F401,F811,F841,E722`) is clean before and
+after; `build_static.py --prove` catches all 12 sabotages.
+
+### Bugs fixed
+
+| Bug | Kind | Test that covers it |
+|---|---|---|
+| **A zero-length booking was confirmed at any hour.** `is_slot_free("23:00", "23:00")` on a provider who works 09:00-17:00 returned True: with start == end the walk never runs and the closing `cursor == end_time` is true by default. `POST /api/appointments` answered 201 and stored it. | functional / logical, out-of-bounds | `test_calendar_logic.py::test_an_empty_or_backwards_span_is_not_free`, `test_appointments_api.py::test_an_empty_or_backwards_booking_is_refused_as_malformed` |
+| **A backwards booking got the wrong error.** 12:00-11:00 came back as 409 "That slot is no longer available", telling the client to pick another slot when the request was malformed. Now 400 "start_time must be before end_time", the same rule `_window_problem` and `_block_problem` already apply. | functional | same API test (3 cases) |
+| **Stored XSS in the planner through Import backup.** `colorKey()` put `e.color` / `e.type` into `class="..."` unescaped, in the month grid, the event list, the timeline and the countdown dots. A backup with `"color": "x\"><img src=x onerror=...>"` ran script. The CSP blocks requests but not top-level navigation, so a script could leave with the planner's contents in the URL. `colorKey()` now keeps only `[\w-]`. | security (XSS) | `test_planner.py::test_a_hostile_colour_in_a_backup_cannot_inject_markup` (real browser, file://; failed before the fix) |
+
+The engine fix is in both `domain/calendar_logic.py` and its JavaScript port
+`tools/static_src/js/slots.js`, and `docs/app/` was rebuilt, so the
+Python-vs-browser comparison (363 answers) still agrees. The guard made the
+`span-exact` sabotage equivalent (the closing comparison can now only be true
+when reached), so `--prove` would have reported a hole. It is now
+`span-empty`, which removes the new guard and is caught. The reasoning is in
+the `build_static.py` docstring.
+
+### Privacy / PII sweep (this is a public repo)
+
+Every tracked text file was scanned for email addresses, UK and US phone
+numbers, postcodes, street addresses and flight numbers. **No personal data
+found.** Every email is on `.local`, `example.*` or a placeholder domain,
+`seed_luke.py` uses only the author's public name and `luke@almanac.local`,
+both seeds in `standalone/planner/` are invented or empty, and
+`docs/planner.html` / `docs/calendar.html` match fresh builds of those seeds
+byte for byte. Git history was not rewritten or audited past HEAD.
+
+Gaps closed in the guard itself (preventive):
+
+* `PERSONAL_SHAPES` only knew UK phone numbers. It now also has a **US phone
+  shape** and US street abbreviations (St, Ave, Rd, Blvd). The negative
+  control uses 555-0123, from the range reserved for fiction.
+* `docs/calendar.html`, the published blank build, had **no tests**. It
+  could drift from the sources, or be rebuilt from a real seed by mistake,
+  and nothing would fail. It now gets a drift test and the personal-shape
+  scan, like `docs/planner.html`.
+
+### Checklist
+
+* **Dispensables**: no dead code (flake8 F401/F841 clean). One stale
+  sabotage (`span-exact`) replaced, as above. Comments match the code.
+* **Bloaters**: radon still rates seven functions C (11-19), the largest
+  being `schedule.import_payload` (19). Left alone: each is a validation
+  sequence with tests on every branch, and splitting them would scatter the
+  rules.
+* **Abusers**: `my_appointments` switches on role for three SQL strings.
+  Left alone, because three cases with different joins read better as code
+  than as a table.
+* **Couplers**: none new. The route still reaches `db` directly, which is
+  how every route here works.
+* **Change preventers**: the slot engine exists twice (Python and the JS
+  port), so a rule change is shotgun surgery by design. `build_static.py`
+  is what keeps that safe, and it caught the equivalent mutant this change
+  created.
+* **Global data / magic numbers / naming**: nothing new. The planner's
+  default view is hard-coded to September 2026 (`var view = { y: 2026, m: 8 }`),
+  noted below.
+
+### Coverage (`python -m coverage run --branch -m pytest`)
+
+| File | Lines | Branches (partial) |
+|---|---|---|
+| core/database.py | 97% (3 missed: Postgres branch 36-37, 213) | 3 partial |
+| domain/coffee_chats.py | 100% | 1 partial |
+| domain/pounds.py | 100% | 2 partial |
+| notify/coffee_notifications.py | 99% (line 242) | 1 partial |
+| notify/notifications.py | 100% | 1 partial |
+| every other module (23 files) | 100% | 100% |
+| **Total** | **1975 statements, 4 missed** | **454 branches, 8 partial: 99%** |
+
+`tools/` and `scripts/` are omitted by `.coveragerc`. The planner's
+JavaScript is tested only in headless Chrome from file://: notifications,
+seeding, rendering, the empty-seed countdown and now hostile imported
+colours. Export/import UI flows and the mailto handoff are checked by
+reading the source, not by running them.
+
+### Maintenance types
+
+* **Corrective**: zero-length/backwards bookings, wrong 409, planner XSS.
+* **Adaptive**: none needed. No deprecated calls found (`utcnow` was fixed
+  in the first pass).
+* **Perfective**: a backwards booking now gets a 400 error that says what
+  is wrong.
+* **Preventive**: US phone/address shapes, drift and PII tests for
+  `docs/calendar.html`, the `span-empty` sabotage, and refreshed published
+  figures (`tools/refresh_figures.py`).
+
+### Left for later
+
+* The planner always opens on **September 2026**. That's fine for the
+  personal September build, but `docs/calendar.html` is a public blank
+  calendar and will open on a past month from now on. Opening on today's
+  month is a one-line change. It is left to the author because the comment
+  says it is deliberate.
+* `token_required` does `int(payload["sub"])`. A validly signed token
+  without `sub` would 500. That is only reachable with the signing key, so
+  it is not fixed.
+* `admin_update_user` silently ignores an unknown `role` instead of
+  returning 400.
+
+---
+
 Static analysis (flake8, radon), a 249-test suite, and a coverage report.
 
 ```bash

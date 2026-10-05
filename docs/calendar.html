@@ -667,9 +667,11 @@ window.PLANNER_DATA = (function () {
     return h12 + ":" + mn + " " + ampm + (tz ? " " + tz : "") + (tbc ? "?" : "");
   }
 
-  /* an event shows the colour you picked; anything older falls back to its type */
+  /* an event shows the colour you picked; anything older falls back to its type.
+   * Every caller puts this inside a class="..." unescaped, and both fields can
+   * come from an imported backup, so only class-name characters survive. */
   function colorKey(e){
-    return e.color ? "c-" + e.color : "m-" + e.type;
+    return (e.color ? "c-" + e.color : "m-" + e.type).replace(/[^\w-]/g, "");
   }
   function fmtHour(h){
     var ampm = h >= 12 ? "PM" : "AM";

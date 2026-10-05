@@ -29,6 +29,10 @@ def book_appointment():
         return jsonify({"error": "date must be a real date in YYYY-MM-DD format"}), 400
     if not is_hhmm(start_time) or not is_hhmm(end_time):
         return jsonify({"error": "start_time and end_time must look like HH:MM"}), 400
+    # A backwards span used to come back as 409 "no longer available", which
+    # tells the client to pick another slot when the request was malformed.
+    if start_time >= end_time:
+        return jsonify({"error": "start_time must be before end_time"}), 400
 
     provider = db.query(
         "SELECT id FROM users WHERE id = ? AND role = 'provider' AND is_active = 1",

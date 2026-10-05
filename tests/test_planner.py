@@ -98,8 +98,11 @@ PERSONAL_SHAPES = {
     "a UK postcode": r"\b[A-Z]{1,2}\d{1,2}[A-Z]?\s*\d[A-Z]{2}\b",
     "an email address": r"[\w.+-]+@[\w-]+\.[\w.]+",
     "a UK phone number": r"\b(?:\+44|07)\d[\d ]{7,}\b",
+    # The author studies in the US, so a US number is the likelier leak.
+    "a US phone number": r"(?:\+1[-. ]?)?\(?\b\d{3}\)?[-. ]\d{3}[-. ]\d{4}\b",
     "a street address": r"\b\d+[a-z]?\s+[A-Z][a-z]+\s+"
-                        r"(?:Road|Street|Avenue|Lane|Drive|Court|Way)\b",
+                        r"(?:Road|Street|Avenue|Lane|Drive|Court|Way"
+                        r"|St|Ave|Rd|Blvd)\b",
     "a flight number": r"\b[A-Z]{2}\d{3,4}\b",
 }
 
@@ -119,14 +122,16 @@ def test_that_check_would_actually_catch_something():
     rather than assuming.
 
     Every value below is deliberately fictional: ZZ99 3WZ is the dummy
-    postcode, 07700 900xxx is the range Ofcom reserves for drama, and
+    postcode, 07700 900xxx is the range Ofcom reserves for drama, 555-0100
+    to 555-0199 is the North American range reserved for fiction, and
     example.com is reserved by the RFC. A control that used a real address
     to prove it catches real addresses would put one in the repository,
     which is the thing this file exists to prevent -- and the first draft of
     this test did exactly that.
     """
     sample = ("Flight XX999 from ZZ99 3WZ, 1 Nowhere Lane, "
-              "call 07700 900123 or someone@example.com")
+              "call 07700 900123 or (555) 555-0123 "
+              "or someone@example.com")
     missed = [what for what, pattern in PERSONAL_SHAPES.items()
               if not re.search(pattern, sample)]
     assert not missed, f"these patterns match nothing: {missed}"
@@ -358,6 +363,32 @@ def test_the_page_says_it_only_works_while_the_tab_is_open(built):
 
 
 @pytest.mark.skipif(not browser(), reason="no browser to open the file in")
+def test_a_hostile_colour_in_a_backup_cannot_inject_markup(built):
+    """`color` and `type` come from localStorage, which Import backup fills
+    from any JSON file somebody is handed. Both went into a class attribute
+    unescaped, so a colour of `"><img onerror=...>` ran script -- and while
+    the CSP blocks requests, it does not block navigating away with the
+    planner's contents in the URL."""
+    hostile = ('x\\"><img src=x onerror=\\"window.__pwned=1\\">')
+    extra = """
+  events[date][0].color = "%s";
+  events[date].push({ id: 'probe-type', time: '23:00', title: 'Typed',
+                      type: "%s", done: false });
+  // Today's month, grid, event list and timeline all draw colorKey().
+  window.addEventListener('load', function () {
+    document.getElementById('todayBtn').click();
+  });
+  window.__report = function () {
+    return { pwned: !!window.__pwned,
+             imgs: document.querySelectorAll('img').length };
+  };
+""" % (hostile, hostile)
+    got = run_in_planner(built, seed_events(20, extra))
+    assert not got["pwned"], "an imported colour ran script"
+    assert got["imgs"] == 0, "an imported colour injected an element"
+
+
+@pytest.mark.skipif(not browser(), reason="no browser to open the file in")
 def test_it_seeds_and_renders_from_disk(built):
     """Opened from disk, where it is actually used. The seed runs once into
     localStorage, so what it wrote there is the whole output of the data
@@ -565,6 +596,31 @@ def test_the_published_copy_is_self_contained():
     with io.open(PUBLISHED, encoding="utf-8") as handle:
         published = handle.read()
     assert not builder.loose_references(published)
+
+
+# docs/calendar.html is the second published build, from the blank seed, and
+# had none of the checks above: it could drift, or be rebuilt from a real
+# seed by mistake, and nothing would fail.
+PUBLISHED_BLANK = os.path.join(ROOT, "docs", "calendar.html")
+
+
+def test_the_published_blank_calendar_matches_a_fresh_build():
+    with io.open(PUBLISHED_BLANK, encoding="utf-8") as handle:
+        published = handle.read()
+    assert published == builder.build(builder.BLANK), (
+        "docs/calendar.html is out of date with standalone/planner/. "
+        "Rebuild: python tools/build_planner.py --blank "
+        "--out docs/calendar.html")
+
+
+def test_the_published_blank_calendar_carries_no_personal_data():
+    with io.open(PUBLISHED_BLANK, encoding="utf-8") as handle:
+        published = handle.read()
+    assert "data.blank.js" in published, "the banner does not name the seed"
+    assert not builder.loose_references(published)
+    for what, pattern in PERSONAL_SHAPES.items():
+        found = [hit.group(0) for hit in re.finditer(pattern, published)]
+        assert not found, f"{what} in the published calendar: {found}"
 
 
 def test_the_policy_claims_nothing_a_meta_tag_cannot_deliver():

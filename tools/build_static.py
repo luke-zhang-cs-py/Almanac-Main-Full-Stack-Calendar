@@ -128,8 +128,8 @@ catch every one.
     cancelled        treat every non-cancelled appointment as busy
     provider         drop the provider_id filter on blocks and bookings
     span-offgrid     accept a span that does not start on a free slot
-    span-exact       stop requiring a span to end on a slot boundary
-    weekday          shift every weekday by one
+    span-empty       call an empty or backwards span bookable
+    weekday         shift every weekday by one
     format           stop zero-padding the hour
     unsorted         hand the slots back in window order
 
@@ -149,6 +149,15 @@ line is an early exit and a statement of intent, not a behaviour. A
 sabotage list that had kept it would have been claiming coverage of a
 branch that has no other side -- so it was replaced by two that do change
 the answer, and this paragraph is here instead.
+
+The same thing happened to one of those two. `span-exact` replaced the
+closing `cursor === endTime` with `true`, and was caught only by the probes
+whose start was at or after their end -- the one case where the walk never
+runs. When an empty span stopped being free (09:00-09:00 had been bookable
+at any hour), that case gained its own guard at the top, the closing
+comparison became true on every path that reaches it, and `span-exact`
+became another sabotage with no other side. It is now `span-empty`, which
+removes the new guard and is caught by the same probes.
 
 The browser is the system Chrome if it is there and Playwright's Chromium
 otherwise. That is a build-time dependency, not a runtime one: `pip install
@@ -993,10 +1002,10 @@ SABOTAGE = [
      "      if (following === undefined) {\n"
      "        return true;                    // not the start of a free slot",
      "call a span bookable when it does not start on a free slot"),
-    ("span-exact",
-     "    return cursor === endTime;",
-     "    return true;",
-     "stop requiring a span to end exactly on a slot boundary"),
+    ("span-empty",
+     "    if (!(startTime < endTime)) {",
+     "    if (false) {",
+     "call an empty or backwards span bookable"),
     ("weekday",
      "            Math.floor(year / 400) + offsets[date.month - 1] + "
      "date.day) % 7;",

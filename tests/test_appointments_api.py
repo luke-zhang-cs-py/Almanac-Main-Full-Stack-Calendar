@@ -369,3 +369,19 @@ def test_a_past_date_has_no_slots_even_with_hours_set(client, provider, booking)
     past = (datetime.date.today() - datetime.timedelta(days=7)).isoformat()
     _, slots = slots_for(client, provider, booking["auth"], past)
     assert slots == []
+
+
+@pytest.mark.parametrize("start, end", [
+    ("23:00", "23:00"), ("10:00", "10:00"), ("12:00", "11:00")])
+def test_an_empty_or_backwards_booking_is_refused_as_malformed(
+        client, provider, booking, start, end):
+    """23:00-23:00 used to be confirmed with a 201 on a provider who works
+    nine to five, and 12:00-11:00 came back as a 409 telling the client the
+    slot had been taken."""
+    from core import database as db
+    res = client.post("/api/appointments", headers=booking["auth"], json={
+        "provider_id": provider["id"], "date": a_weekday(),
+        "start_time": start, "end_time": end})
+    assert res.status_code == 400
+    assert "before" in res.get_json()["error"]
+    assert len(db.query("SELECT id FROM appointments")) == 1   # the fixture's

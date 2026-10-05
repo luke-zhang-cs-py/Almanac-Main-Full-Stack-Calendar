@@ -359,6 +359,10 @@ var AlmanacSlots = (function () {
    * provider offering 30-minute slots can still take a 60-minute booking,
    * and a single-slot booking behaves identically. */
   function isSlotFree(data, providerId, dateStr, startTime, endTime, now) {
+    /* An empty or backwards span is not free; see is_slot_free. */
+    if (!(startTime < endTime)) {
+      return false;
+    }
     var free = getFreeSlots(data, providerId, dateStr, now);
     if (!free.length) {
       return false;

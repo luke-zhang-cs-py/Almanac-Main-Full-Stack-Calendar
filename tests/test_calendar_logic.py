@@ -64,6 +64,18 @@ def test_a_booking_off_the_grid_is_not_free(ctx, provider):
     assert not is_slot_free(provider["id"], a_weekday(), "09:07", "09:22")
 
 
+@pytest.mark.parametrize("start, end", [
+    ("23:00", "23:00"),     # empty, and outside hours that end at 17:00
+    ("10:00", "10:00"),     # empty, inside hours
+    ("12:00", "11:00"),     # backwards
+])
+def test_an_empty_or_backwards_span_is_not_free(ctx, provider, start, end):
+    """The walk never runs when start == end, and the closing
+    `cursor == end_time` was then true by default."""
+    from domain.calendar_logic import is_slot_free
+    assert not is_slot_free(provider["id"], a_weekday(), start, end)
+
+
 def test_slot_starts_for_shrinks_as_the_session_lengthens(ctx, provider):
     from domain.calendar_logic import slot_starts_for
     day = a_weekday()

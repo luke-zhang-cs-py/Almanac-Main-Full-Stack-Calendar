@@ -171,7 +171,13 @@ def is_slot_free(provider_id: int, date_str: str, start_time: str, end_time: str
     Walking consecutive free slots instead means a booking is free when every
     slot it covers is free and it ends exactly on a boundary. A single-slot
     booking still behaves identically, so nothing that worked before changes.
+
+    An empty or backwards span is not free. With start == end the walk below
+    never runs and the closing comparison is trivially true, so "23:00-23:00"
+    was bookable on a provider who works nine to five.
     """
+    if not start_time < end_time:
+        return False
     free = get_free_slots(provider_id, date_str)
     if not free:
         return False

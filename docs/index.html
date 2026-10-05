@@ -371,11 +371,11 @@ var MODULES = [
   { name: 'core/database.py',               lines: 562, stmts: 118, missed:  3, does: 'one interface over SQLite and Postgres' },
   { name: 'routes/availability_routes.py',  lines: 177, stmts: 100, missed:  0, does: 'provider hours and blocked dates; the public slot lookup' },
   { name: 'routes/coffee_routes.py',        lines: 206, stmts:  99, missed:  0, does: 'invites for the host, booking for the guest' },
+  { name: 'domain/calendar_logic.py',       lines: 212, stmts:  90, missed:  0, does: 'the free-slot engine' },
   { name: 'domain/offerings.py',            lines: 250, stmts:  89, missed:  0, does: 'the priced catalogue; money as integer minor units' },
-  { name: 'domain/calendar_logic.py',       lines: 206, stmts:  88, missed:  0, does: 'the free-slot engine' },
   { name: 'domain/schedule.py',             lines: 257, stmts:  84, missed:  0, does: 'a timetable imported from the planner, and what may be reminded about' },
   { name: 'notify/coffee_notifications.py', lines: 247, stmts:  84, missed:  1, does: 'invite, nudge, booked and declined mail' },
-  { name: 'routes/appointment_routes.py',   lines: 165, stmts:  82, missed:  0, does: 'book, list, cancel, complete' },
+  { name: 'routes/appointment_routes.py',   lines: 169, stmts:  84, missed:  0, does: 'book, list, cancel, complete' },
   { name: 'notify/email_render.py',         lines: 223, stmts:  71, missed:  0, does: 'how a message is laid out — text and HTML from one description' },
   { name: 'routes/offering_routes.py',      lines: 135, stmts:  70, missed:  0, does: 'catalogue CRUD for the owner, browse for everyone' },
   { name: 'routes/auth_routes.py',          lines:  95, stmts:  55, missed:  0, does: 'register, login, me' },
@@ -403,8 +403,8 @@ var OMITTED = [
 ];
 
 var TESTS = [
-  { file: 'test_appointments_api.py',     n: 46, of: 'booking, cancelling, completing, and who may do which' },
-  { file: 'test_planner.py',              n: 39, of: 'the standalone planner, and that no seed of anyone’s is committed with it' },
+  { file: 'test_appointments_api.py',     n: 49, of: 'booking, cancelling, completing, and who may do which' },
+  { file: 'test_planner.py',              n: 43, of: 'the standalone planner, and that no seed of anyone’s is committed with it' },
   { file: 'test_email_render.py',         n: 33, of: 'that the text and HTML halves cannot drift apart' },
   { file: 'test_coffee_chats.py',         n: 32, of: 'the invite lifecycle end to end' },
   { file: 'test_pounds.py',               n: 31, of: 'the cross rate and the markup, against the wallet fixture' },
@@ -412,11 +412,11 @@ var TESTS = [
   { file: 'test_schedule.py',             n: 28, of: 'the imported timetable, and the reminder the planner cannot send' },
   { file: 'test_hostile_input.py',        n: 27, of: 'what a provider can do to their own calendar' },
   { file: 'test_accounts_api.py',         n: 24, of: 'registration, login, and the role nobody may self-assign' },
+  { file: 'test_calendar_logic.py',       n: 21, of: 'the slot engine' },
   { file: 'test_email_admin_api.py',      n: 21, of: 'the delivery log and the manual scan' },
   { file: 'test_routes.py',               n: 21, of: 'the HTTP surface' },
   { file: 'test_refusals.py',             n: 20, of: 'what every endpoint says when it has to say no' },
   { file: 'test_offerings.py',            n: 19, of: 'the catalogue, and money as integer minor units' },
-  { file: 'test_calendar_logic.py',       n: 18, of: 'the slot engine' },
   { file: 'test_coffee_edges.py',         n: 17, of: 'expired links, lost races, and payloads nobody meant to send' },
   { file: 'test_coffee_notifications.py', n: 17, of: 'invite, nudge, booked and declined mail' },
   { file: 'test_config_and_mailer.py',    n: 17, of: 'the key check, and a mail server that refuses' },
@@ -429,7 +429,7 @@ var TESTS = [
   { file: 'test_scheduler.py',            n: 10, of: 'the background sweep' }
 ];
 
-var TEST_LINES = 6474;
+var TEST_LINES = 6558;
 
 /* Which interpreter produced the statement counts above. It matters: coverage
  * counts a `with` block or a multi-line call differently between versions, so
