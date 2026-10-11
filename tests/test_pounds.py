@@ -430,3 +430,22 @@ def test_a_quote_refuses_an_amount_it_cannot_read(client, booking):
         got = client.get(f"/api/pounds/quote?{query}",
                          headers=booking["auth"])
         assert got.status_code == 400, f"{query} was accepted"
+
+
+def test_a_rate_file_with_blank_cells_keeps_the_legs_it_has(tmp_path):
+    """A day with one leg missing keeps the other; a day with neither is not
+    in the table at all, so a lookup cannot land on it."""
+    from domain import pounds
+    path = tmp_path / "gaps.csv"
+    path.write_text(
+        "date,CAD,GBP\n"
+        "2026-09-11,1.6064,0.85815\n"
+        "2026-09-10,,0.859\n"
+        "2026-09-09,,\n",
+        encoding="utf-8")
+    try:
+        table = pounds.load(path=str(path), force=True)
+        assert list(table["2026-09-10"]) == ["GBP"]
+        assert "2026-09-09" not in table
+    finally:
+        pounds.reset()

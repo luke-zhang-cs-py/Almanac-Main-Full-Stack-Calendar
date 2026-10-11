@@ -93,11 +93,10 @@ def _new_connection():
 
 def get_db():
     """Return a request-scoped connection (Flask app-context aware)."""
-    if g is not None and hasattr(g, "_db_conn"):
+    if hasattr(g, "_db_conn"):
         return g._db_conn
     conn = _new_connection()
-    if g is not None:
-        g._db_conn = conn
+    g._db_conn = conn
     return conn
 
 

@@ -195,3 +195,20 @@ def test_a_quiet_sweep_reports_nothing(ctx, provider, outbox):
     an_invite(provider, guest_email="fresh@test.local")
     assert cn.send_due_nudges() == {"nudged": 0, "expired": 0}
     assert outbox == []
+
+
+def test_the_sweep_does_not_send_what_another_worker_already_claimed(
+        ctx, provider, outbox, monkeypatch):
+    """Two workers can both see the same invite as due. Only the one whose
+    claim succeeds sends; the other must not send at all, rather than send
+    and then find out it was the second."""
+    invite = an_invite(provider, guest_email="raced@test.local")
+    stale = {"id": invite["id"], "nudge_count": 0}
+    monkeypatch.setattr(cc, "due_for_nudge", lambda now: [stale])
+
+    # Somebody else's sweep got there first and moved the count on.
+    assert cc.record_nudge(invite["id"], expected_nudge_count=0)
+
+    assert cn.send_due_nudges() == {"nudged": 0, "expired": 0}
+    assert outbox == []
+    assert cc.get_invite(invite["id"])["nudge_count"] == 1

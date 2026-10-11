@@ -309,3 +309,17 @@ def test_a_guest_cannot_overlap_a_booking_made_during_their_check(
                     "AND date = ? AND status = 'confirmed'",
                     (provider["id"], day["date"]))
     assert len(rows) == 1, rows
+
+
+def test_a_day_the_host_has_blocked_is_not_offered(client, provider, ctx):
+    """A day with no starts left is left out of the list rather than shown
+    empty, so a guest never opens a day with nothing on it."""
+    invite = an_invite(client, provider, email="blocked@test.local")
+    first = dt.date.today() + dt.timedelta(days=1)
+    client.post("/api/availability/mine/block",
+                json={"date": first.isoformat()}, headers=provider["auth"])
+
+    offered = coffee_chats.available_slots(
+        coffee_chats.get_invite(invite["id"]), days=3, start_from=first)
+    assert [d["date"] for d in offered] == [
+        (first + dt.timedelta(days=n)).isoformat() for n in (1, 2)]

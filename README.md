@@ -145,7 +145,7 @@ a missing one.
 pytest -q
 ```
 
-537 tests, 100% of 1,975 statements. 14 of those guard the published slot-engine
+544 tests, 100% of 1,974 statements. 14 of those guard the published slot-engine
 demo: every copied file byte-identical to its source, no `fetch()` anywhere so
 `file://` keeps working, and every clause of the "this is not the platform"
 banner still present.

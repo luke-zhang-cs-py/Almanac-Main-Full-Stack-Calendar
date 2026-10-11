@@ -362,3 +362,20 @@ def test_the_servers_offset_is_this_machines(ctx):
         noon = real_dt.datetime.fromisoformat(date_iso + "T12:00")
         want = noon.astimezone().utcoffset().total_seconds() // 60
         assert schedule._server_offset_minutes(date_iso) == want
+
+
+def test_a_class_whose_email_was_not_taken_is_still_marked(client, booking,
+                                                           ctx, monkeypatch):
+    """The mark goes on whatever the mailer decided. A send that failed is
+    retried from email_log; scanning again must not queue a second message
+    about the same class."""
+    from notify import mailer
+    from notify import notifications
+    import_one(client, booking, 20)
+
+    with monkeypatch.context() as refusing:
+        refusing.setattr(mailer, "send", lambda message: None)
+        assert notifications.send_schedule_reminders() == 0
+
+    assert notifications.send_schedule_reminders() == 0
+    assert sent("schedule_soon") == []
