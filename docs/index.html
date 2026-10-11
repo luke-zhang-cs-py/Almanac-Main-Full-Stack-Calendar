@@ -368,7 +368,7 @@ var MODULES = [
   { name: 'domain/pounds.py',               lines: 523, stmts: 193, missed:  0, does: 'Canadian dollars into pounds, crossed through the euro, against a ceiling' },
   { name: 'notify/notifications.py',        lines: 470, stmts: 130, missed:  0, does: 'what Almanac says, and on what occasion' },
   { name: 'notify/mailer.py',               lines: 280, stmts: 122, missed:  0, does: 'transport: SMTP, the background queue, the delivery log' },
-  { name: 'core/database.py',               lines: 561, stmts: 117, missed:  0, does: 'one interface over SQLite and Postgres' },
+  { name: 'core/database.py',               lines: 559, stmts: 115, missed:  0, does: 'one interface over SQLite and Postgres' },
   { name: 'routes/availability_routes.py',  lines: 177, stmts: 100, missed:  0, does: 'provider hours and blocked dates; the public slot lookup' },
   { name: 'routes/coffee_routes.py',        lines: 206, stmts:  99, missed:  0, does: 'invites for the host, booking for the guest' },
   { name: 'domain/calendar_logic.py',       lines: 212, stmts:  90, missed:  0, does: 'the free-slot engine' },
@@ -415,12 +415,12 @@ var TESTS = [
   { file: 'test_calendar_logic.py',       n: 21, of: 'the slot engine' },
   { file: 'test_email_admin_api.py',      n: 21, of: 'the delivery log and the manual scan' },
   { file: 'test_routes.py',               n: 21, of: 'the HTTP surface' },
+  { file: 'test_last_resorts.py',         n: 20, of: 'the arms that run only after something else went wrong' },
   { file: 'test_refusals.py',             n: 20, of: 'what every endpoint says when it has to say no' },
   { file: 'test_offerings.py',            n: 19, of: 'the catalogue, and money as integer minor units' },
   { file: 'test_coffee_edges.py',         n: 18, of: 'expired links, lost races, and payloads nobody meant to send' },
   { file: 'test_coffee_notifications.py', n: 18, of: 'invite, nudge, booked and declined mail' },
   { file: 'test_config_and_mailer.py',    n: 17, of: 'the key check, and a mail server that refuses' },
-  { file: 'test_last_resorts.py',         n: 20, of: 'the arms that run only after something else went wrong' },
   { file: 'test_static_demo.py',          n: 14, of: 'that the published slot-engine demo has not drifted from what built it' },
   { file: 'test_api_naming.py',           n: 13, of: 'that the whole API speaks one language on the wire' },
   { file: 'test_timestamps.py',           n: 13, of: 'that every timestamp is written the same way' },
@@ -429,7 +429,7 @@ var TESTS = [
   { file: 'test_scheduler.py',            n: 10, of: 'the background sweep' }
 ];
 
-var TEST_LINES = 6673;
+var TEST_LINES = 6670;
 
 /* Which interpreter produced the statement counts above. It matters: coverage
  * counts a `with` block or a multi-line call differently between versions, so
