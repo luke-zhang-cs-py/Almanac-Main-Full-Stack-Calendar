@@ -245,12 +245,12 @@ def _grouped(provider_id, conn):
     return ordered + [{"category": c, "offerings": v} for c, v in buckets.items()]
 
 
-def main():
+def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--reset", action="store_true",
                     help="delete existing offerings before seeding")
     ap.add_argument("--list", action="store_true", help="show and exit")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
     with db.standalone_connection() as conn:
         db.init_db(conn=conn)

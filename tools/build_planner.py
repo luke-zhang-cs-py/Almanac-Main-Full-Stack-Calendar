@@ -128,7 +128,7 @@ def loose_references(page):
                       page)
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--data", default=None,
                         help="the seed to inline (default: the sample)")
@@ -138,7 +138,7 @@ def main():
     parser.add_argument("--out",
                         default=os.path.join(ROOT, "september-planner.html"),
                         help="where to write the file")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     if args.blank and args.data:
         raise SystemExit("--blank and --data both name a seed; pick one")

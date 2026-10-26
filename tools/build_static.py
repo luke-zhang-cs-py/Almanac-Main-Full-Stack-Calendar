@@ -1123,8 +1123,8 @@ def prune(kept):
                 print("  removed stale %s" % os.path.relpath(path, OUT))
 
 
-def main():
-    proving = "--prove" in sys.argv[1:]
+def build(argv):
+    proving = "--prove" in argv
 
     all_scenarios = scenarios()
     written = collect(all_scenarios)
@@ -1157,18 +1157,27 @@ def main():
     print("  prove the check bites:  python tools/build_static.py --prove")
 
 
-if __name__ == "__main__":
-    # A database of this build's own, and no mail or timer, before anything
-    # from the app is imported: core.config reads DATABASE_URL at import
-    # time and core.database caches what it found.
-    _TMP = tempfile.mkdtemp(prefix="almanac-build-")
-    os.environ["DATABASE_URL"] = "sqlite:///" + os.path.join(_TMP, "build.db")
+def main(argv=None):
+    """The build, given a database of its own and no mail or timer.
+
+    The environment is set before anything from the app is imported:
+    core.config reads DATABASE_URL at import time and core.database caches
+    what it found, which is why python_side() imports the app lazily.
+    """
+    argv = sys.argv[1:] if argv is None else argv
+    scratch = tempfile.mkdtemp(prefix="almanac-build-")
+    os.environ["DATABASE_URL"] = "sqlite:///" + os.path.join(scratch,
+                                                             "build.db")
     os.environ.setdefault("SECRET_KEY",
                           "build-secret-long-enough-for-hs256-and-then-some")
     os.environ.setdefault("SMTP_HOST", "")
     os.environ.setdefault("MAIL_ENABLED", "0")
     os.environ.setdefault("REMINDERS_ENABLED", "0")
     try:
-        main()
+        build(argv)
     finally:
-        shutil.rmtree(_TMP, ignore_errors=True)
+        shutil.rmtree(scratch, ignore_errors=True)
+
+
+if __name__ == "__main__":
+    main()

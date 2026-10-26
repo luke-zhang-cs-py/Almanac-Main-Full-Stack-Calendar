@@ -403,7 +403,7 @@ def index():
     return Response(PAGE_HTML, mimetype="text/html")
 
 
-if __name__ == "__main__":
+def main():
     init_db()
     # Loopback, not 0.0.0.0. This is the same bug the main app had and had
     # fixed -- see the note beside Config.HOST -- and the fix was never
@@ -425,3 +425,7 @@ if __name__ == "__main__":
     print(f"Login page running at http://localhost:{port}")
     print(f"User database: {DB_PATH}")
     app.run(host=host, port=port, debug=debug)
+
+
+if __name__ == "__main__":
+    main()

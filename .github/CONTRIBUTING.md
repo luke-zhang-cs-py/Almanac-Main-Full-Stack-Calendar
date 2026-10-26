@@ -34,11 +34,14 @@ bug.
 ## Tests
 
 ```bash
-pytest -q
+pytest -q --cov --cov-branch --cov-fail-under=100
 python -m flake8 . --select=E9,F63,F7,F82
 ```
 
-527 tests, about four minutes. Both must be clean before a push.
+654 tests. Both must be clean before a push: CI runs the first exactly, and
+fails below 100% of lines and branches over the whole repository, tools and
+scripts included. The only exclusion is the `if __name__ == "__main__":`
+line, so a script's work belongs in a `main()` a test can call.
 
 Three things the suite guards that are easy to break by accident:
 

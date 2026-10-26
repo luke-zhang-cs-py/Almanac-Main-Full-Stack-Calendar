@@ -77,5 +77,11 @@ def create_app():
 
 app = create_app()
 
-if __name__ == "__main__":
+
+def main():
+    """`python app.py`: serve with what Config says, loopback by default."""
     app.run(host=Config.HOST, port=Config.PORT, debug=Config.DEBUG)
+
+
+if __name__ == "__main__":
+    main()

@@ -43,4 +43,8 @@ jobs:
         # writing messages to the console rather than sending them. Anything
         # that needs a real secret or a real SMTP host is either skipped or
         # is a bug.
-        run: pytest -q
+        #
+        # Under coverage, and failing below 100% of lines and branches over
+        # the whole repository: .coveragerc sets `source = .` and omits only
+        # tests/, so the tools and scripts are measured too.
+        run: pytest -q --cov --cov-branch --cov-report=term-missing --cov-fail-under=100

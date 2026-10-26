@@ -1,13 +1,16 @@
 [run]
+# The whole repository, not just what the suite happens to import: with no
+# `source`, a module nothing imports is missing from the report rather than
+# shown as uncovered. The developer tools and the hand-run scripts are in
+# scope too -- they write the published pages and seed real databases, so
+# they get tested like everything else.
+source = .
+branch = True
 omit =
     tests/*
-    # Developer scripts, not shipped code.
-    tools/*
-    # login_page.py, seed_data.py and seed_luke.py, which live together now.
-    scripts/*
 
 [report]
-exclude_lines =
-    pragma: no cover
+# The one exclusion: the line that hands a script over to its main(), which
+# is itself tested.
+exclude_also =
     if __name__ == .__main__.:
-    raise NotImplementedError

@@ -43,11 +43,11 @@ sys.path.insert(0, ROOT)
 
 PAGE = os.path.join(ROOT, "docs", "index.html")
 
-# Directories that hold no shipped module. tests/ is excluded from coverage by
-# the config too; the rest are never source.
+# Directories that hold no Python of the project's own. tests/ is excluded
+# from coverage by the config too; the rest are never source. tools/ and
+# scripts/ are not here: they used to be omitted, and are measured now.
 SKIP_DIRS = {".git", "__pycache__", "tests", "htmlcov", ".venv", "venv",
-             "node_modules", "docs", "tools", "data", "static", "templates",
-             "scripts"}
+             "node_modules", "docs", "data", "static", "templates"}
 
 # The page's own history: counts that describe what a figure *used to* say.
 # These are the only numbers on the page allowed to be wrong, because being
@@ -130,7 +130,7 @@ def has_coverage_data():
     try:
         cov.load()
         return bool(cov.get_data().measured_files())
-    except Exception:                                  # pragma: no cover
+    except Exception:
         return False
 
 
@@ -316,10 +316,9 @@ def test_every_module_is_on_the_page(page):
     assert present - listed == set(), (
         f"these modules are in the project but not on the page: "
         f"{sorted(present - listed)}")
-    # The omitted scripts live in scripts/, which source_files() skips on
-    # purpose, so their existence is checked against the disk rather than
-    # against a scan that is meant not to find them. A name that is on the
-    # page and nowhere at all is still caught.
+    # Checked against the disk as well as against the scan, so that an
+    # omitted module living in a directory the scan skips is not reported as
+    # gone. A name that is on the page and nowhere at all is still caught.
     gone = sorted(name for name in listed - present
                   if not os.path.exists(os.path.join(ROOT, name)))
     assert gone == [], (
@@ -329,13 +328,24 @@ def test_every_module_is_on_the_page(page):
 def test_the_omitted_modules_really_are_omitted(page):
     """If a page claims a module is left out of coverage on purpose and the
     config does not omit it, the omission has become an accident."""
-    claimed = listed_omissions(page)
-    if not claimed:
-        pytest.skip("this page claims no omissions")
-    for name in claimed:
+    for name in listed_omissions(page):
         assert is_omitted(name), (
             f"the page says {name} is omitted from coverage, but nothing in "
             f".coveragerc matches it: {omit_patterns()}")
+
+
+def test_nothing_is_omitted_that_the_page_does_not_name(page):
+    """The other direction, and the one that matters now the page claims no
+    omissions at all: a module .coveragerc leaves out without the page saying
+    so is a coverage figure measured over the wrong set of files."""
+    claimed = set(listed_omissions(page))
+    silent = sorted(name for name in source_files()
+                    if is_omitted(name) and name not in claimed)
+    assert silent == [], (
+        f".coveragerc omits these but the page does not say so: {silent}")
+    assert source_files() >= {"tools/build_static.py",
+                              "scripts/login_page.py"}, (
+        "the scan no longer reaches tools/ and scripts/, so this is vacuous")
 
 
 def measured_with(page):

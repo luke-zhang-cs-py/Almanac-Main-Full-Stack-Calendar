@@ -73,7 +73,7 @@ def _new_connection():
         try:
             import psycopg2
             import psycopg2.extras
-        except ImportError as exc:  # pragma: no cover
+        except ImportError as exc:
             raise RuntimeError(
                 "DATABASE_URL points at Postgres but psycopg2-binary is not "
                 "installed. Run: pip install psycopg2-binary"

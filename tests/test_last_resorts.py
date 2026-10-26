@@ -424,3 +424,33 @@ def test_postgres_takes_an_exclusive_table_lock_before_a_guarded_write(
     assert db.lock_for_write("pound_conversions", conn=conn) is conn
     assert conn.statements == [
         ("LOCK TABLE pound_conversions IN EXCLUSIVE MODE", ())]
+
+
+def test_postgres_without_its_driver_says_how_to_install_it(monkeypatch):
+    """DATABASE_URL names Postgres and psycopg2 is not installed. That is a
+    setup mistake, not a crash, so it is turned into an instruction."""
+    import sys
+
+    from core import database as db
+
+    monkeypatch.setitem(sys.modules, "psycopg2", None)
+    monkeypatch.setattr(db, "_IS_POSTGRES", True)
+    with pytest.raises(RuntimeError, match="pip install psycopg2-binary"):
+        db._new_connection()
+
+
+# ------------------------------------------------- running app.py directly
+
+
+def test_running_app_py_serves_with_the_configured_host_port_and_debug(
+        monkeypatch):
+    """`python app.py` is main(), which serves with what Config says --
+    loopback by default -- and nothing else."""
+    import app as app_module
+    from core.config import Config
+
+    calls = []
+    monkeypatch.setattr(app_module.app, "run", lambda **kw: calls.append(kw))
+    app_module.main()
+    assert calls == [{"host": Config.HOST, "port": Config.PORT,
+                      "debug": Config.DEBUG}]

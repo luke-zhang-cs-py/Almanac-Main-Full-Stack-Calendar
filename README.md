@@ -143,9 +143,12 @@ a missing one.
 
 ```bash
 pytest -q
+pytest -q --cov --cov-branch --cov-fail-under=100   # what CI runs
 ```
 
-544 tests, 100% of 1,972 statements. 14 of those guard the published slot-engine
+654 tests, 100% of 2,733 statements, and of every branch, measured over the
+whole repository: `.coveragerc` omits only `tests/`, so the build tools and
+the seed scripts are counted too, and CI fails below 100%. 14 of those guard the published slot-engine
 demo: every copied file byte-identical to its source, no `fetch()` anywhere so
 `file://` keeps working, and every clause of the "this is not the platform"
 banner still present.

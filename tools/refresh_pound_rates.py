@@ -107,11 +107,11 @@ def write(rates, path):
             writer.writerow([on] + [rates[on].get(code, "") for code in PAIR])
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--timeout", type=int, default=120)
     parser.add_argument("--out", default=OUT)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     rates = parse(download(args.timeout))
     if not rates:
