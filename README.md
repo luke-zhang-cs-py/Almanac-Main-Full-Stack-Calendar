@@ -146,7 +146,7 @@ pytest -q
 pytest -q --cov --cov-branch --cov-fail-under=100   # what CI runs
 ```
 
-654 tests, 100% of 2,733 statements, and of every branch, measured over the
+655 tests, 100% of 2,733 statements, and of every branch, measured over the
 whole repository: `.coveragerc` omits only `tests/`, so the build tools and
 the seed scripts are counted too, and CI fails below 100%. 14 of those guard the published slot-engine
 demo: every copied file byte-identical to its source, no `fetch()` anywhere so

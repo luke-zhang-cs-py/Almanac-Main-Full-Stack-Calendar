@@ -383,7 +383,7 @@ var MODULES = [
   { name: 'tools/refresh_pound_rates.py',   lines: 131, stmts:  72, missed:  0, does: 'refreshes the ECB rate history the pound wallet reads' },
   { name: 'notify/email_render.py',         lines: 223, stmts:  71, missed:  0, does: 'how a message is laid out — text and HTML from one description' },
   { name: 'routes/offering_routes.py',      lines: 135, stmts:  70, missed:  0, does: 'catalogue CRUD for the owner, browse for everyone' },
-  { name: 'tools/build_planner.py',         lines: 167, stmts:  56, missed:  0, does: 'inlines the planner into one file that cannot reach the network' },
+  { name: 'tools/build_planner.py',         lines: 172, stmts:  56, missed:  0, does: 'inlines the planner into one file that cannot reach the network' },
   { name: 'routes/auth_routes.py',          lines:  95, stmts:  55, missed:  0, does: 'register, login, me' },
   { name: 'app.py',                         lines:  87, stmts:  51, missed:  0, does: 'the factory and the blueprint registration' },
   { name: 'accounts/auth.py',               lines:  87, stmts:  49, missed:  0, does: 'JWTs, and the two decorators that guard every route' },
@@ -435,14 +435,14 @@ var TESTS = [
   { file: 'test_api_naming.py',           n: 13, of: 'that the whole API speaks one language on the wire' },
   { file: 'test_timestamps.py',           n: 13, of: 'that every timestamp is written the same way' },
   { file: 'test_published_figures.py',    n: 12, of: 'the numbers on this page, against a fresh measurement' },
+  { file: 'test_build_planner.py',        n: 10, of: 'the planner build command, and the source shapes it tolerates' },
   { file: 'test_delivery.py',             n: 10, of: 'the SMTP conversation, and the sweep that drives it' },
   { file: 'test_refresh_pound_rates.py',  n: 10, of: 'the ECB download and parse, with no network' },
   { file: 'test_scheduler.py',            n: 10, of: 'the background sweep' },
-  { file: 'test_build_planner.py',        n:  9, of: 'the planner build command, and the source shapes it tolerates' },
   { file: 'test_seed_scripts.py',         n:  8, of: 'the seed scripts, run twice against a throwaway database' }
 ];
 
-var TEST_LINES = 8346;
+var TEST_LINES = 8359;
 
 /* Which interpreter produced the statement counts above. It matters: coverage
  * counts a `with` block or a multi-line call differently between versions, so

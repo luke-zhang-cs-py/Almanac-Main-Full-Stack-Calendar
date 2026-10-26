@@ -123,6 +123,19 @@ def test_a_page_with_no_doctype_still_gets_the_banner_first(bare_sources):
     assert builder.loose_references(page) == []
 
 
+
+def test_an_uppercase_doctype_still_gets_the_banner(bare_sources):
+    """<!DOCTYPE html> is the same declaration as <!doctype html>; the banner
+    goes straight after it, as it does for the lower-case spelling."""
+    index = os.path.join(builder.SRC, "index.html")
+    text = "<!DOCTYPE html>\n" + read(index)
+    with io.open(index, "w", encoding="utf-8") as handle:
+        handle.write(text)
+
+    page = builder.build(bare_sources)
+    assert page.startswith("<!DOCTYPE html>\n<!--\n  The planner, as one file.")
+    assert page.count("The planner, as one file.") == 1
+
 def test_a_page_with_its_own_policy_has_it_replaced(bare_sources):
     """A source page that allows the network gets the no-network policy
     instead, in place, rather than a second policy beside the first."""

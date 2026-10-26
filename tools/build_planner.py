@@ -116,8 +116,13 @@ def build(data_path=None):
     label = os.path.basename(data_path)
     if os.path.abspath(data_path) == os.path.abspath(SAMPLE):
         label += "  (invented -- pass --data to build your own)"
-    page = page.replace("<!doctype html>", "<!doctype html>\n" + BANNER % label, 1)
-    if "<!doctype html>" not in page.lower()[:200]:
+    # Case-insensitive: <!DOCTYPE html> is the same declaration, and a
+    # case-sensitive replace found nothing there while the lower-cased check
+    # that followed it still saw a doctype -- so the banner was dropped.
+    page, placed = re.subn(
+        r"(?i)<!doctype html>",
+        lambda found: found.group(0) + "\n" + BANNER % label, page, count=1)
+    if not placed:
         page = BANNER % label + page
     return page
 
