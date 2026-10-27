@@ -158,11 +158,17 @@ def test_download_stops_when_curl_fails_or_returns_nothing(
 
 
 def test_main_writes_the_file_and_summarises_it(tmp_path, monkeypatch, capsys):
-    monkeypatch.setattr(rates, "download",
-                        lambda timeout: history_zip(HISTORY))
+    asked = []
+
+    def download(timeout):
+        asked.append(timeout)
+        return history_zip(HISTORY)
+
+    monkeypatch.setattr(rates, "download", download)
     out = tmp_path / "eur_legs.csv"
     rates.main(["--out", str(out), "--timeout", "3"])
 
+    assert asked == [3], "--timeout reaches the download, as an int"
     assert out.read_text(encoding="utf-8").startswith("date,CAD,GBP")
     said = capsys.readouterr().out
     assert "3 days, 2026-10-21 to 2026-10-23, 1 with both legs" in said

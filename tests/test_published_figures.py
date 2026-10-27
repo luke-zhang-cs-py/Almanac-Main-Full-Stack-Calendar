@@ -16,8 +16,7 @@ What is checked statically, so it works in CI with no coverage run:
 
   * every module the page lists exists, with the line count it claims;
   * its statement count is what `coverage` counts, using this repo's own
-    `.coveragerc` — which is what keeps the corpus tools and the model
-    downloader out, and everything else in;
+    `.coveragerc` — which omits only tests/, so everything else is in;
   * no module in the project is missing from the page;
   * every test file and its collected count.
 
@@ -328,10 +327,11 @@ def test_every_module_is_on_the_page(page):
 def test_the_omitted_modules_really_are_omitted(page):
     """If a page claims a module is left out of coverage on purpose and the
     config does not omit it, the omission has become an accident."""
-    for name in listed_omissions(page):
-        assert is_omitted(name), (
-            f"the page says {name} is omitted from coverage, but nothing in "
-            f".coveragerc matches it: {omit_patterns()}")
+    accidental = sorted(name for name in listed_omissions(page)
+                        if not is_omitted(name))
+    assert accidental == [], (
+        f"the page says {accidental} are omitted from coverage, but nothing "
+        f"in .coveragerc matches them: {omit_patterns()}")
 
 
 def test_nothing_is_omitted_that_the_page_does_not_name(page):

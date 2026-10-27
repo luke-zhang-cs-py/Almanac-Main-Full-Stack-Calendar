@@ -143,7 +143,7 @@ a missing one.
 
 ```bash
 pytest -q
-pytest -q --cov --cov-branch --cov-fail-under=100   # what CI runs
+pytest -q --cov --cov-branch --cov-report=term-missing --cov-fail-under=100   # what CI runs
 ```
 
 655 tests, 100% of 2,733 statements, and of every branch, measured over the
