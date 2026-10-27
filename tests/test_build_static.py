@@ -220,7 +220,7 @@ def test_frozen_pins_now_and_always_puts_the_clock_back():
     from domain import calendar_logic
 
     real = calendar_logic.dt.datetime
-    with pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError, match="the comparison blew up"):
         with bs.frozen(calendar_logic, "2026-09-16T10:30"):
             assert calendar_logic.dt.datetime.now() == real(2026, 9, 16, 10, 30)
             raise RuntimeError("the comparison blew up")
@@ -478,9 +478,11 @@ def test_a_sabotage_that_survives_is_a_build_failure(chromium, cases, ours,
     hour stops being zero-padded, which is what a matrix with no single-digit
     hour in it would do."""
     source = pristine()
+    (made_harmless,) = [new for name, _old, new, _what in bs.SABOTAGE
+                        if name == "format"]
 
     def answer(html, payload):
-        if "return hours + ':' + pad2(minutes);" in html:
+        if made_harmless in html:
             return as_the_port(ours)
         return broken(ours)
 

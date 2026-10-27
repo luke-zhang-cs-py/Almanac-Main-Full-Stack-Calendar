@@ -136,6 +136,19 @@ def test_an_uppercase_doctype_still_gets_the_banner(bare_sources):
     assert page.count("The planner, as one file.") == 1
 
 
+def test_a_doctype_inside_the_inlined_code_is_not_the_page_s(bare_sources):
+    """With no doctype of its own, the banner goes first -- not after a
+    "<!doctype html>" that only appears inside a string in the seed or the
+    engine once they are inlined, which would put a comment in the code."""
+    with io.open(bare_sources, "w", encoding="utf-8") as handle:
+        handle.write("var TEMPLATE = '<!doctype html><p>x</p>';\n")
+
+    page = builder.build(bare_sources)
+    assert page.startswith("<!--\n  The planner, as one file.")
+    assert "var TEMPLATE = '<!doctype html><p>x</p>';" in page
+    assert page.count("The planner, as one file.") == 1
+
+
 def test_a_page_with_its_own_policy_has_it_replaced(bare_sources):
     """A source page that allows the network gets the no-network policy
     instead, in place, rather than a second policy beside the first."""

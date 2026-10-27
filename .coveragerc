@@ -3,7 +3,8 @@
 # `source`, a module nothing imports is missing from the report rather than
 # shown as uncovered. The developer tools and the hand-run scripts are in
 # scope too -- they write the published pages and seed real databases, so
-# they get tested like everything else.
+# they get tested like everything else. tools/ has an __init__.py for this
+# reason: coverage finds unimported files only inside packages.
 source = .
 branch = True
 omit =
@@ -11,6 +12,8 @@ omit =
 
 [report]
 # The one exclusion: the line that hands a script over to its main(), which
-# is itself tested.
-exclude_also =
+# is itself tested. exclude_lines rather than exclude_also: _also keeps
+# coverage's built-in `pragma: no cover` rule, so a pragma could still hide
+# a line. This list replaces the defaults.
+exclude_lines =
     if __name__ == .__main__.:

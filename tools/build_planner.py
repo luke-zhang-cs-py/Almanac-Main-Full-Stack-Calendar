@@ -119,8 +119,11 @@ def build(data_path=None):
     # Case-insensitive: <!DOCTYPE html> is the same declaration, and a
     # case-sensitive replace found nothing there while the lower-cased check
     # that followed it still saw a doctype -- so the banner was dropped.
+    # Anchored to the top of the page: by now the seed and the engine are
+    # inlined, and a "<!doctype html>" inside one of their strings is not
+    # the page's.
     page, placed = re.subn(
-        r"(?i)<!doctype html>",
+        r"(?i)\A\s*<!doctype html>",
         lambda found: found.group(0) + "\n" + BANNER % label, page, count=1)
     if not placed:
         page = BANNER % label + page

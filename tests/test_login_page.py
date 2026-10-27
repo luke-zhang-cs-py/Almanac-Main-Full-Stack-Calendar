@@ -199,6 +199,6 @@ def test_main_refuses_the_placeholder_key_with_debug_off(served, monkeypatch):
     monkeypatch.setitem(login_page.app.config, "SECRET_KEY",
                         config.DEV_SECRET_KEY)
     monkeypatch.setenv("FLASK_DEBUG", "0")
-    with pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError, match="development placeholder"):
         login_page.main()
     assert served == [], "it must refuse before it serves"
