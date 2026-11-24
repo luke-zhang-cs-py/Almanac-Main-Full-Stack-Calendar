@@ -413,6 +413,7 @@ var OMITTED = [
 ];
 
 var TESTS = [
+  { file: 'test_theming.py',              n: 50, of: 'the colour themes: complete blocks, AA pairings, dark with no script, the toggle' },
   { file: 'test_appointments_api.py',     n: 49, of: 'booking, cancelling, completing, and who may do which' },
   { file: 'test_planner.py',              n: 43, of: 'the standalone planner, and that no seed of anyone’s is committed with it' },
   { file: 'test_build_static.py',         n: 42, of: 'the slot-engine build: compare, refuse, prove, write' },
@@ -442,11 +443,10 @@ var TESTS = [
   { file: 'test_delivery.py',             n: 10, of: 'the SMTP conversation, and the sweep that drives it' },
   { file: 'test_refresh_pound_rates.py',  n: 10, of: 'the ECB download and parse, with no network' },
   { file: 'test_scheduler.py',            n: 10, of: 'the background sweep' },
-  { file: 'test_seed_scripts.py',         n:  8, of: 'the seed scripts, run twice against a throwaway database' },
-  { file: 'test_theming.py',              n:  0, of: 'the colour themes: complete blocks, AA pairings, dark with no script, the toggle' }
+  { file: 'test_seed_scripts.py',         n:  8, of: 'the seed scripts, run twice against a throwaway database' }
 ];
 
-var TEST_LINES = 8380;
+var TEST_LINES = 8851;
 
 /* Which interpreter produced the statement counts above. It matters: coverage
  * counts a `with` block or a multi-line call differently between versions, so
