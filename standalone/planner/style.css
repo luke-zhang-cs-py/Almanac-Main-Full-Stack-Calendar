@@ -1,225 +1,289 @@
-  html{color-scheme:dark}
   body{margin:0}
   [hidden]{display:none !important}
 
+  /* ====================================================================
+     DESIGN TOKENS
+     1. Theme-independent tokens (spacing, type) live on :root.
+     2. Colour tokens live in one block per theme, keyed on a class on
+        <html>. class="theme-dark" is in the markup, so the planner is
+        themed with no JavaScript; app.js only restores a saved choice.
+     3. Components below read semantic tokens only (the pick-your-own
+        event colours are data, and say so).
+     To add a theme: copy a theme block, rename it .theme-<name>, set every
+     token, and add <name> to THEMES in app.js. tests/test_theming.py checks
+     the new block is complete and that every pairing meets WCAG AA.
+     ==================================================================== */
   :root{
-    --bg:#06090f;
-    --surface:#0c1119;
-    --surface-2:#111a25;
-    --border:#1c2836;
-    --border-strong:#2d4054;
-    --text:#dce6f0;
-    --text-dim:#8296ab;
-    --text-faint:#586a7c;
-    --accent:#22d3ee;
-    --accent-soft:#0a2430;
-    --on-accent:#04080d;
-    --meeting:#22d3ee;
-    --match:#5b8cf7;
-    --class:#34d399;
-    --personal:#fbbf24;
-    --event:#a78bfa;
-    --danger:#fb7185;
-    --past:#090d13;
-    --mono:ui-monospace,"SF Mono","Cascadia Mono","Segoe UI Mono",Consolas,"Liberation Mono",monospace;
+    /* spacing: --space-N is N x 4px */
+    --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:20px;--space-6:24px;--space-8:32px;--space-14:56px;
+    /* typography */
+    --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --font-mono:ui-monospace,"SF Mono","Cascadia Mono","Segoe UI Mono",Consolas,"Liberation Mono",monospace;
+    --text-micro:9.5px;--text-3xs:10px;--text-2xs:10.5px;--text-xs:11px;--text-label:11.5px;--text-sm:12px;
+    --text-control:12.5px;--text-md:13px;--text-lg:14.5px;--text-body:15px;--text-xl:17px;
+    --text-display-sm:27px;--text-display:30px;
+    --leading-none:1;--leading-tight:1.3;--leading-snug:1.35;--leading-list:1.45;--leading-body:1.55;--leading-relaxed:1.6;
+    --weight-regular:400;--weight-semibold:600;--weight-bold:700;
+    --tracking-tight:-.02em;--tracking-mono:.02em;--tracking-label:.04em;
   }
+
+  /* ---- themes. :where(:root) has no specificity, so it is only the fallback for
+     an <html> with no theme class or an unknown one. */
+  :where(:root),.theme-dark{
+    color-scheme:dark;
+    --color-bg:#06090f;
+    --color-surface:#0c1119;
+    --color-surface-subtle:#111a25;   /* day cells, fields */
+    --color-surface-past:#090d13;     /* a day that has gone */
+    --color-border:#1c2836;
+    --color-border-strong:#54697f;    /* form-field edges, 3:1 (was #2d4054, 1.78:1) */
+    --color-text-primary:#dce6f0;
+    --color-text-muted:#8296ab;
+    --color-text-subtle:#7d90a4;      /* was #586a7c: 3.14:1 on a day cell */
+    --color-accent:#22d3ee;
+    --color-accent-hover:#67e8f9;
+    --color-accent-subtle:#0a2430;    /* selected day, the edited event */
+    --color-text-on-accent:#04080d;
+    --color-danger:#fb7185;
+    --color-type-meeting:#22d3ee;     /* event kinds: dots and strips beside text */
+    --color-type-match:#5b8cf7;
+    --color-type-class:#34d399;
+    --color-type-personal:#fbbf24;
+    --color-type-event:#a78bfa;
+    --color-swatch-edge:rgba(255,255,255,.14);
+    --color-scrim:rgba(6,9,15,.82);
+    --icon-moon:none;--icon-sun:inline;
+  }
+  .theme-light{
+    color-scheme:light;
+    --color-bg:#f2f5f8;
+    --color-surface:#ffffff;
+    --color-surface-subtle:#edf1f5;
+    --color-surface-past:#e3e8ee;
+    --color-border:#d3dbe4;
+    --color-border-strong:#7b8898;
+    --color-text-primary:#0f1a24;
+    --color-text-muted:#3f5064;
+    --color-text-subtle:#4f6074;
+    --color-accent:#0b6b85;
+    --color-accent-hover:#155e75;
+    --color-accent-subtle:#d7f1f7;
+    --color-text-on-accent:#ffffff;
+    --color-danger:#be123c;
+    --color-type-meeting:#0891b2;
+    --color-type-match:#3b6fe0;
+    --color-type-class:#059669;
+    --color-type-personal:#d97706;
+    --color-type-event:#7c3aed;
+    --color-swatch-edge:rgba(15,26,36,.2);
+    --color-scrim:rgba(15,26,36,.45);
+    --icon-moon:inline;--icon-sun:none;
+  }
+
 
   *{box-sizing:border-box}
   body{
-    background:var(--bg);
-    color:var(--text);
-    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--color-bg);
+    color:var(--color-text-primary);
+    font:var(--text-body)/var(--leading-body) var(--font-sans);
     -webkit-font-smoothing:antialiased;
   }
-  .wrap{max-width:1100px;margin:0 auto;padding:26px 24px 56px}
+  .wrap{max-width:1100px;margin:0 auto;padding:var(--space-6) var(--space-6) var(--space-14)}
 
   /* square geometry throughout */
   .card,.day,.chip,button,input,select,.bar,.bar i,.ev,.todo,.dot,.n,.hour{border-radius:0}
 
   /* ---------- discreet header: just the month and the controls ---------- */
-  .topbar{display:flex;align-items:center;gap:2px;margin-bottom:14px}
-  .monthlabel{font:12px var(--mono);color:var(--text-dim);letter-spacing:.04em;padding:0 12px 0 4px}
+  .topbar{display:flex;align-items:center;gap:2px;margin-bottom:var(--space-4)}
+  .monthlabel{font:var(--text-sm) var(--font-mono);color:var(--color-text-muted);letter-spacing:var(--tracking-label);padding:0 var(--space-3) 0 var(--space-1)}
   .spacer{flex:1}
+  /* the theme switch: the theme block decides which icon shows, so it is right before any script runs */
+  .themebtn{display:inline-flex;align-items:center;justify-content:center}
+  .themebtn svg{width:14px;height:14px}
+  .themebtn .moon{display:var(--icon-moon)}
+  .themebtn .sun{display:var(--icon-sun)}
 
   button{font:inherit;cursor:pointer;border:1px solid transparent;transition:color .12s,border-color .12s,background .12s}
-  .ghost{background:transparent;border-color:var(--border);color:var(--text-dim);padding:5px 11px;min-width:32px;font-size:12.5px;margin-left:-1px}
-  .ghost:hover{border-color:var(--border-strong);color:var(--text)}
-  .primary{background:var(--accent);color:var(--on-accent);border:none;padding:8px 14px;font-size:13px;font-weight:600}
-  .primary:hover{filter:brightness(1.12)}
-  .quiet{background:transparent;border:1px solid var(--border-strong);color:var(--text-dim);padding:8px 12px;font-size:12.5px}
-  .quiet:hover{color:var(--accent);border-color:var(--accent)}
-  .linkbtn{background:none;border:none;color:var(--text-faint);padding:8px 0 0;font-size:12px;text-decoration:underline;text-underline-offset:3px}
-  .linkbtn:hover{color:var(--text)}
+  .ghost{background:transparent;border-color:var(--color-border);color:var(--color-text-muted);padding:var(--space-1) var(--space-3);min-width:32px;font-size:var(--text-control);margin-left:-1px}
+  .ghost:hover{border-color:var(--color-border-strong);color:var(--color-text-primary)}
+  .primary{background:var(--color-accent);color:var(--color-text-on-accent);border:none;padding:var(--space-2) var(--space-4);font-size:var(--text-md);font-weight:var(--weight-semibold)}
+  .primary:hover{background:var(--color-accent-hover)}
+  .quiet{background:transparent;border:1px solid var(--color-border-strong);color:var(--color-text-muted);padding:var(--space-2) var(--space-3);font-size:var(--text-control)}
+  .quiet:hover{color:var(--color-accent);border-color:var(--color-accent)}
+  .linkbtn{background:none;border:none;color:var(--color-text-subtle);padding:var(--space-2) 0 0;font-size:var(--text-sm);text-decoration:underline;text-underline-offset:3px}
+  .linkbtn:hover{color:var(--color-text-primary)}
   /* The reminder switch, on. It used to change only its label -- faint grey
      text, in a row beside another faint grey link -- so turning reminders
      on was semantically true and invisible. The on state is a lit pill with
      a dot, and it drops the underline, so the state is the first thing you
      see rather than something to read. */
-  #notifyBtn[aria-pressed="true"]{color:var(--accent);font-weight:600;
-      background:var(--accent-soft);border:1px solid var(--accent);
-      padding:4px 10px;text-decoration:none}
-  #notifyBtn[aria-pressed="true"]::before{content:"\25cf  ";font-size:10px}
-  #notifyBtn[aria-pressed="true"]:hover{color:var(--accent)}
-  #notifyMsg.live{color:var(--accent)}
+  #notifyBtn[aria-pressed="true"]{color:var(--color-accent);font-weight:var(--weight-semibold);
+      background:var(--color-accent-subtle);border:1px solid var(--color-accent);
+      padding:var(--space-1) var(--space-2);text-decoration:none}
+  #notifyBtn[aria-pressed="true"]::before{content:"\25cf  ";font-size:var(--text-3xs)}
+  #notifyBtn[aria-pressed="true"]:hover{color:var(--color-accent)}
+  #notifyMsg.live{color:var(--color-accent)}
 
   /* ---------- layout ---------- */
-  .app{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:start}
-  .main{display:flex;flex-direction:column;gap:16px;min-width:0}
-  .card{background:var(--surface);border:1px solid var(--border);padding:16px}
-  .side{display:flex;flex-direction:column;gap:20px}
-  .cardtitle{margin:0 0 13px;font-size:12px;font-weight:600;color:var(--text-faint);display:flex;align-items:baseline;gap:8px}
-  .count{font:11px var(--mono);color:var(--text-faint);font-weight:400}
+  .app{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:var(--space-5);align-items:start}
+  .main{display:flex;flex-direction:column;gap:var(--space-4);min-width:0}
+  .card{background:var(--color-surface);border:1px solid var(--color-border);padding:var(--space-4)}
+  .side{display:flex;flex-direction:column;gap:var(--space-5)}
+  .cardtitle{margin:0 0 var(--space-3);font-size:var(--text-sm);font-weight:var(--weight-semibold);color:var(--color-text-subtle);display:flex;align-items:baseline;gap:var(--space-2)}
+  .count{font:var(--text-xs) var(--font-mono);color:var(--color-text-subtle);font-weight:var(--weight-regular)}
 
   /* ---------- countdown (compact, to leave the list room) ---------- */
-  .cdcard{padding:14px 16px}
-  .cdcard .cardtitle{margin-bottom:9px}
-  .cdrow{display:flex;align-items:baseline;gap:9px}
-  .bignum{font:600 30px/1 var(--mono);letter-spacing:-.02em;color:var(--accent);font-variant-numeric:tabular-nums}
-  .cdlabel{margin:0;font-size:12px;color:var(--text-dim)}
-  .bar{height:3px;background:var(--surface-2);margin:11px 0 7px}
-  .bar i{display:block;height:100%;background:var(--accent);transition:width .3s ease}
-  .cdsub{margin:0;font:10.5px var(--mono);color:var(--text-faint)}
-  .cdopen kbd{font:10px var(--mono);border:1px solid var(--border-strong);
-    padding:1px 4px;color:var(--text-dim);text-decoration:none}
+  .cdcard{padding:var(--space-4) var(--space-4)}
+  .cdcard .cardtitle{margin-bottom:var(--space-2)}
+  .cdrow{display:flex;align-items:baseline;gap:var(--space-2)}
+  .bignum{font:var(--weight-semibold) var(--text-display)/var(--leading-none) var(--font-mono);letter-spacing:var(--tracking-tight);color:var(--color-accent);font-variant-numeric:tabular-nums}
+  .cdlabel{margin:0;font-size:var(--text-sm);color:var(--color-text-muted)}
+  .bar{height:3px;background:var(--color-surface-subtle);margin:var(--space-3) 0 var(--space-2)}
+  .bar i{display:block;height:100%;background:var(--color-accent);transition:width .3s ease}
+  .cdsub{margin:0;font:var(--text-2xs) var(--font-mono);color:var(--color-text-subtle)}
+  .cdopen kbd{font:var(--text-3xs) var(--font-mono);border:1px solid var(--color-border-strong);
+    padding:1px var(--space-1);color:var(--color-text-muted);text-decoration:none}
 
   /* ---------- countdown overlay ---------- */
   /* One box per target. The number is the point, so it carries the type
      scale on its own and everything else in the box recedes. */
   .cdoverlay{position:fixed;inset:0;z-index:40;display:flex;
-    align-items:center;justify-content:center;padding:24px;
-    background:rgba(6,9,15,.82)}
-  .cdpanel{background:var(--surface);border:1px solid var(--border-strong);
-    padding:18px 20px 16px;width:min(1000px,100%);max-height:88vh;
+    align-items:center;justify-content:center;padding:var(--space-6);
+    background:var(--color-scrim)}
+  .cdpanel{background:var(--color-surface);border:1px solid var(--color-border-strong);
+    padding:var(--space-4) var(--space-5) var(--space-4);width:min(1000px,100%);max-height:88vh;
     display:flex;flex-direction:column}
   .cdhead{display:flex;align-items:center;justify-content:space-between;
-    gap:12px;margin-bottom:12px;flex:0 0 auto}
+    gap:var(--space-3);margin-bottom:var(--space-3);flex:0 0 auto}
   .cdhead .cardtitle{margin:0}
   /* 121 of them, so each one is small and the grid scrolls rather than the
      page. Small enough that a title will not fit, which is what the dots and
      the tooltip are for. */
-  .cdboxes{display:grid;gap:5px;overflow:auto;flex:1 1 auto;
+  .cdboxes{display:grid;gap:var(--space-1);overflow:auto;flex:1 1 auto;
     grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
-  .cdbox{border:1px solid var(--border);background:var(--surface-2);
-    padding:7px 8px 6px;display:flex;flex-direction:column;gap:1px;min-width:0}
-  .cdbox .n{font:600 17px/1 var(--mono);letter-spacing:-.02em;
-    font-variant-numeric:tabular-nums;color:var(--accent)}
-  .cdbox .d{font:9.5px var(--mono);color:var(--text-dim);white-space:nowrap}
+  .cdbox{border:1px solid var(--color-border);background:var(--color-surface-subtle);
+    padding:var(--space-2) var(--space-2) var(--space-2);display:flex;flex-direction:column;gap:1px;min-width:0}
+  .cdbox .n{font:var(--weight-semibold) var(--text-xl)/var(--leading-none) var(--font-mono);letter-spacing:var(--tracking-tight);
+    font-variant-numeric:tabular-nums;color:var(--color-accent)}
+  .cdbox .d{font:var(--text-micro) var(--font-mono);color:var(--color-text-muted);white-space:nowrap}
   /* The dot takes its colour from the same .c-* / .m-* classes the chips and
      strips use, via colorKey -- so a dot here and the block in the day view
      are the same colour without a second table of colours to keep in step. */
-  .cdbox .dots{display:flex;gap:2px;margin:4px 0 2px;min-height:4px;flex-wrap:wrap}
+  .cdbox .dots{display:flex;gap:2px;margin:var(--space-1) 0 2px;min-height:4px;flex-wrap:wrap}
   .cddot{width:8px;height:4px;flex:0 0 auto}
-  .cddot.none{background:var(--border)}
-  .cdbox .k{font-size:10px;color:var(--text-dim);overflow:hidden;
+  .cddot.none{background:var(--color-border)}
+  .cdbox .k{font-size:var(--text-3xs);color:var(--color-text-muted);overflow:hidden;
     text-overflow:ellipsis;white-space:nowrap}
   /* Today and the days gone read differently, and not by colour alone --
      today is outlined and the past is dimmed. */
-  .cdbox.now{border-color:var(--accent);background:var(--accent-soft)}
-  .cdbox.now .n{color:var(--accent)}
+  .cdbox.now{border-color:var(--color-accent);background:var(--color-accent-subtle)}
+  .cdbox.now .n{color:var(--color-accent)}
   .cdbox.gone{opacity:.42}
-  .cdbox.gone .n{color:var(--text-dim)}
+  .cdbox.gone .n{color:var(--color-text-muted)}
   /* The grid scrolls, so the note has to sit outside it rather than read as
      one more row that happens to be text. */
-  .cdfoot{flex:0 0 auto;border-top:1px solid var(--border);
-    margin-top:12px;padding-top:10px;line-height:1.6}
+  .cdfoot{flex:0 0 auto;border-top:1px solid var(--color-border);
+    margin-top:var(--space-3);padding-top:var(--space-2);line-height:var(--leading-relaxed)}
   @media (max-width:520px){
-    .cdpanel{padding:14px 15px 12px}
+    .cdpanel{padding:var(--space-4) var(--space-4) var(--space-3)}
     .cdboxes{grid-template-columns:repeat(auto-fill,minmax(88px,1fr))}
   }
 
   /* ---------- calendar ---------- */
-  .dow{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:5px}
-  .dow span{text-align:center;font-size:11px;color:var(--text-faint);padding-bottom:3px}
+  .dow{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:var(--space-1)}
+  .dow span{text-align:center;font-size:var(--text-xs);color:var(--color-text-subtle);padding-bottom:3px}
   .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
   .day{
-    all:unset;display:flex;flex-direction:column;gap:5px;
-    min-height:100px;padding:7px 8px;
-    background:var(--surface-2);border:1px solid transparent;
+    all:unset;display:flex;flex-direction:column;gap:var(--space-1);
+    min-height:100px;padding:var(--space-2) var(--space-2);
+    background:var(--color-surface-subtle);border:1px solid transparent;
     cursor:pointer;overflow:hidden;
   }
   /* a day that has already passed goes grey and recedes */
-  .day.past{background:var(--past)}
-  .day.past .dnum{color:var(--text-faint)}
+  .day.past{background:var(--color-surface-past)}
+  .day.past .dnum{color:var(--color-text-subtle)}
   .day.past .chip,.day.past .marks{opacity:.4;filter:grayscale(.85)}
   .day.outside{background:transparent;cursor:default}
-  .day:hover{border-color:var(--border-strong)}
-  .day.selected,.day.selected:hover{border-color:var(--accent);background:var(--accent-soft)}
-  .day.selected .dnum{color:var(--text)}
+  .day:hover{border-color:var(--color-border-strong)}
+  .day.selected,.day.selected:hover{border-color:var(--color-accent);background:var(--color-accent-subtle)}
+  .day.selected .dnum{color:var(--color-text-primary)}
   .day.selected .chip{opacity:1;filter:none}
-  .day:focus-visible{outline:1px solid var(--accent);outline-offset:1px}
+  .day:focus-visible{outline:1px solid var(--color-accent);outline-offset:1px}
 
-  .dnum{font:12px var(--mono);color:var(--text-dim);display:flex;align-items:center}
+  .dnum{font:var(--text-sm) var(--font-mono);color:var(--color-text-muted);display:flex;align-items:center}
   /* square marker for today, not a circle */
   .day.today .dnum .n{
-    background:var(--accent);color:var(--on-accent);font-weight:700;
-    min-width:19px;height:18px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;
+    background:var(--color-accent);color:var(--color-text-on-accent);font-weight:var(--weight-bold);
+    min-width:19px;height:18px;display:inline-flex;align-items:center;justify-content:center;padding:0 var(--space-1);
   }
   .chips{display:flex;flex-direction:column;gap:3px;min-width:0}
-  .chip{display:flex;align-items:center;gap:6px;font:10.5px/1.35 var(--mono);
-        white-space:nowrap;overflow:hidden;color:var(--text)}
+  .chip{display:flex;align-items:center;gap:var(--space-2);font:var(--text-2xs)/var(--leading-snug) var(--font-mono);
+        white-space:nowrap;overflow:hidden;color:var(--color-text-primary)}
   .dot{width:5px;height:5px;flex:0 0 auto}
-  .chip .t{color:var(--text-faint);font-variant-numeric:tabular-nums;flex:0 0 auto}
+  .chip .t{color:var(--color-text-subtle);font-variant-numeric:tabular-nums;flex:0 0 auto}
   .chip .x{overflow:hidden;text-overflow:ellipsis}
   .chip.done{opacity:.4}
   .chip.done .x,.chip.done .t{text-decoration:line-through}
-  .more{font:10px var(--mono);color:var(--text-faint);padding-left:11px}
-  .marks{margin-top:auto;font:9.5px var(--mono);color:var(--text-faint);letter-spacing:.02em}
-  .m-meeting{background:var(--meeting)} .m-match{background:var(--match)}
-  .m-class{background:var(--class)}     .m-personal{background:var(--personal)}
-  .m-event{background:var(--event)}
-  .m-task{background:var(--class)}   /* legacy events saved before "class" replaced "task" */
-  /* pick-your-own palette */
+  .more{font:var(--text-3xs) var(--font-mono);color:var(--color-text-subtle);padding-left:var(--space-3)}
+  .marks{margin-top:auto;font:var(--text-micro) var(--font-mono);color:var(--color-text-subtle);letter-spacing:var(--tracking-mono)}
+  .m-meeting{background:var(--color-type-meeting)} .m-match{background:var(--color-type-match)}
+  .m-class{background:var(--color-type-class)}     .m-personal{background:var(--color-type-personal)}
+  .m-event{background:var(--color-type-event)}
+  .m-task{background:var(--color-type-class)}   /* legacy events saved before "class" replaced "task" */
+  /* pick-your-own palette. These are data, not theme: the colour somebody chose
+     for an event is stored with it, so it stays the same colour in every theme.
+     Each one only ever marks a dot or a strip beside the event's own text. */
   .c-cyan{background:#22d3ee}   .c-blue{background:#5b8cf7}
   .c-violet{background:#a78bfa} .c-green{background:#34d399}
   .c-amber{background:#fbbf24}  .c-orange{background:#fb923c}
   .c-pink{background:#f472b6}   .c-red{background:#fb7185}
   .c-slate{background:#8296ab}
 
-  .swatches{display:flex;gap:6px;align-items:center}
-  .sw{width:18px;height:18px;padding:0;border:1px solid rgba(255,255,255,.14);cursor:pointer;flex:0 0 auto}
-  .sw:hover{border-color:var(--text-dim)}
-  .sw[aria-pressed="true"]{outline:1px solid var(--text);outline-offset:2px}
-  .sw:focus-visible{outline:2px solid var(--text);outline-offset:2px}
+  .swatches{display:flex;gap:var(--space-2);align-items:center}
+  .sw{width:18px;height:18px;padding:0;border:1px solid var(--color-swatch-edge);cursor:pointer;flex:0 0 auto}
+  .sw:hover{border-color:var(--color-text-muted)}
+  .sw[aria-pressed="true"]{outline:1px solid var(--color-text-primary);outline-offset:2px}
+  .sw:focus-visible{outline:2px solid var(--color-text-primary);outline-offset:2px}
 
   /* ---------- expanded day view ---------- */
-  .dayview{border-color:var(--border-strong)}
-  .cardhead{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:16px}
-  .dvtitle{margin:0;font-size:15px;font-weight:600}
-  .dvtitle span{color:var(--text-faint);font:11px var(--mono);font-weight:400;margin-left:8px}
+  .dayview{border-color:var(--color-border-strong)}
+  .cardhead{display:flex;align-items:baseline;justify-content:space-between;gap:var(--space-2);margin-bottom:var(--space-4)}
+  .dvtitle{margin:0;font-size:var(--text-body);font-weight:var(--weight-semibold)}
+  .dvtitle span{color:var(--color-text-subtle);font:var(--text-xs) var(--font-mono);font-weight:var(--weight-regular);margin-left:var(--space-2)}
   /* Events take the wider column on a wide screen: they are the content,
      and the timeline beside them is a picture of it. 1.3/1 rather than 1/1
      -- enough that event titles stop wrapping, not so much that the hour
      labels crowd. Collapses to one column below 900px, further down. */
-  .dvgrid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:26px}
-  .colhead{margin:0 0 9px;font-size:11.5px;font-weight:600;color:var(--text-faint)}
-  .colhead.sp{margin-top:22px}
+  .dvgrid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:var(--space-6)}
+  .colhead{margin:0 0 var(--space-2);font-size:var(--text-label);font-weight:var(--weight-semibold);color:var(--color-text-subtle)}
+  .colhead.sp{margin-top:var(--space-6)}
 
   /* Setup: the two things the file cannot know about you. Outlined while
      either is unset, so a blank planner says what it needs instead of
      quietly doing nothing when you turn reminders on. */
-  .setup.needed{border-color:var(--accent)}
-  .setuplabel{display:block;margin:2px 0 5px;font-size:11px;color:var(--text-faint)}
-  .setuplabel + .row{margin-bottom:10px}
+  .setup.needed{border-color:var(--color-accent)}
+  .setuplabel{display:block;margin:2px 0 var(--space-1);font-size:var(--text-xs);color:var(--color-text-subtle)}
+  .setuplabel + .row{margin-bottom:var(--space-2)}
   .setup input[type=email]{flex:1 1 auto;min-width:0}
   .setup input[type=number]{flex:0 1 96px;min-width:0}
   .setup select{flex:0 0 auto}
 
   /* proportional day timeline: 1 minute = HOUR_PX/60 pixels */
   .timeline{position:relative}
-  .tlh{position:absolute;left:0;right:0;border-top:1px solid var(--border)}
-  .tlh:last-of-type{border-bottom:1px solid var(--border)}
+  .tlh{position:absolute;left:0;right:0;border-top:1px solid var(--color-border)}
+  .tlh:last-of-type{border-bottom:1px solid var(--color-border)}
   .tll{position:absolute;left:0;top:2px;width:44px;text-align:right;
-       font:10.5px var(--mono);color:var(--text-faint);font-variant-numeric:tabular-nums}
+       font:var(--text-2xs) var(--font-mono);color:var(--color-text-subtle);font-variant-numeric:tabular-nums}
   /* click any empty stretch to start an event there */
   .tlarea{position:absolute;top:0;bottom:0;left:52px;right:0;cursor:pointer}
   .blk{position:absolute;overflow:hidden;cursor:pointer;text-align:left;
        display:flex;flex-direction:column;gap:1px;
-       padding:3px 6px 3px 10px;background:var(--surface-2);border:1px solid var(--border);
-       font:10.5px/1.3 var(--mono);color:var(--text)}
-  .blk:hover{border-color:var(--accent);z-index:2}
-  .blk:focus-visible{outline:1px solid var(--accent);z-index:2}
+       padding:3px var(--space-2) 3px var(--space-2);background:var(--color-surface-subtle);border:1px solid var(--color-border);
+       font:var(--text-2xs)/var(--leading-tight) var(--font-mono);color:var(--color-text-primary)}
+  .blk:hover{border-color:var(--color-accent);z-index:2}
+  .blk:focus-visible{outline:1px solid var(--color-accent);z-index:2}
   .blk .strip{position:absolute;left:0;top:0;bottom:0;width:3px}
-  .blkt{color:var(--text-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 0 auto}
+  .blkt{color:var(--color-text-subtle);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 0 auto}
   .blkx{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .blk.tight{padding-top:1px;padding-bottom:1px;justify-content:center}
   .blk.tight .blkt{display:none}
@@ -228,45 +292,45 @@
 
   /* ---------- lists ---------- */
   .evlist,.todolist{list-style:none;margin:0;padding:0}
-  .evlist{margin-bottom:12px}
-  .ev,.todo{display:flex;gap:9px;padding:7px 0;border-bottom:1px solid var(--border)}
+  .evlist{margin-bottom:var(--space-3)}
+  .ev,.todo{display:flex;gap:var(--space-2);padding:var(--space-2) 0;border-bottom:1px solid var(--color-border)}
   .ev{align-items:center}
   .todo{align-items:flex-start}
   .ev:last-child,.todo:last-child{border-bottom:none}
-  .ev .time{font:11px var(--mono);font-variant-numeric:tabular-nums;color:var(--text-dim);flex:0 0 auto;min-width:92px}
-  .ev .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
-  .ev.editing{background:var(--accent-soft);box-shadow:inset 2px 0 0 var(--accent)}
-  .edit{all:unset;cursor:pointer;color:var(--text-faint);font:10.5px var(--mono);padding:2px 4px;flex:0 0 auto}
-  .edit:hover{color:var(--accent)}
-  .edit:focus-visible{outline:1px solid var(--accent)}
+  .ev .time{font:var(--text-xs) var(--font-mono);font-variant-numeric:tabular-nums;color:var(--color-text-muted);flex:0 0 auto;min-width:92px}
+  .ev .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--text-md)}
+  .ev.editing{background:var(--color-accent-subtle);box-shadow:inset 2px 0 0 var(--color-accent)}
+  .edit{all:unset;cursor:pointer;color:var(--color-text-subtle);font:var(--text-2xs) var(--font-mono);padding:2px var(--space-1);flex:0 0 auto}
+  .edit:hover{color:var(--color-accent)}
+  .edit:focus-visible{outline:1px solid var(--color-accent)}
   /* an established meeting gets crossed out */
   .ev.done{opacity:.55}
-  .ev.done .name,.ev.done .time{text-decoration:line-through;color:var(--text-faint)}
+  .ev.done .name,.ev.done .time{text-decoration:line-through;color:var(--color-text-subtle)}
   .ev.done .dot{filter:grayscale(1)}
   /* to-do items carry more weight than the surrounding chrome */
-  .todo{padding:10px 0;gap:11px}
-  .todo .txt{flex:1;min-width:0;font-size:14.5px;line-height:1.45;color:var(--text);overflow-wrap:anywhere}
-  .todo.done .txt{text-decoration:line-through;color:var(--text-faint)}
-  .todolist{margin-bottom:10px}
+  .todo{padding:var(--space-2) 0;gap:var(--space-3)}
+  .todo .txt{flex:1;min-width:0;font-size:var(--text-lg);line-height:var(--leading-list);color:var(--color-text-primary);overflow-wrap:anywhere}
+  .todo.done .txt{text-decoration:line-through;color:var(--color-text-subtle)}
+  .todolist{margin-bottom:var(--space-2)}
 
-  .del{all:unset;cursor:pointer;color:var(--text-faint);font-size:15px;line-height:1;padding:0 3px;flex:0 0 auto}
-  .del:hover{color:var(--danger)}
-  .del:focus-visible{outline:1px solid var(--accent)}
-  .empty{color:var(--text-faint);font-size:12.5px;margin:0 0 12px}
-  .hint{margin:10px 0 0;font-size:12px;color:var(--text-faint)}
-  .datarow{display:flex;gap:18px}
+  .del{all:unset;cursor:pointer;color:var(--color-text-subtle);font-size:var(--text-body);line-height:var(--leading-none);padding:0 3px;flex:0 0 auto}
+  .del:hover{color:var(--color-danger)}
+  .del:focus-visible{outline:1px solid var(--color-accent)}
+  .empty{color:var(--color-text-subtle);font-size:var(--text-control);margin:0 0 var(--space-3)}
+  .hint{margin:var(--space-2) 0 0;font-size:var(--text-sm);color:var(--color-text-subtle)}
+  .datarow{display:flex;gap:var(--space-4)}
   .datarow .linkbtn{padding:0}
 
-  .addform{display:flex;flex-direction:column;gap:7px}
-  .row{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
-  .dash{font:11px var(--mono);color:var(--text-faint);flex:0 0 auto}
+  .addform{display:flex;flex-direction:column;gap:var(--space-2)}
+  .row{display:flex;gap:var(--space-2);flex-wrap:wrap;align-items:center}
+  .dash{font:var(--text-xs) var(--font-mono);color:var(--color-text-subtle);flex:0 0 auto}
   #evType{flex:0 0 108px}
   input[type=text],input[type=time],select{
-    font:13px var(--mono);width:100%;min-width:0;padding:8px 9px;color:var(--text);
-    background:var(--surface-2);border:1px solid var(--border);
+    font:var(--text-md) var(--font-mono);width:100%;min-width:0;padding:var(--space-2) var(--space-2);color:var(--color-text-primary);
+    background:var(--color-surface-subtle);border:1px solid var(--color-border-strong);
   }
-  input::placeholder{color:var(--text-faint)}
-  input:focus,select:focus{outline:none;border-color:var(--accent)}
+  input::placeholder{color:var(--color-text-subtle)}
+  input:focus,select:focus{outline:none;border-color:var(--color-accent)}
   input[type=time]{flex:0 0 108px;font-variant-numeric:tabular-nums}
   select{flex:1}
   #evTz{flex:0 0 88px}
@@ -274,15 +338,15 @@
   /* square checkboxes (native ones round themselves) */
   input[type=checkbox]{
     appearance:none;-webkit-appearance:none;margin:0;flex:0 0 auto;cursor:pointer;position:relative;
-    width:14px;height:14px;background:transparent;border:1px solid var(--border-strong);
+    width:14px;height:14px;background:transparent;border:1px solid var(--color-border-strong);
   }
-  input[type=checkbox]:hover{border-color:var(--accent)}
-  input[type=checkbox]:checked{background:var(--accent);border-color:var(--accent)}
+  input[type=checkbox]:hover{border-color:var(--color-accent)}
+  input[type=checkbox]:checked{background:var(--color-accent);border-color:var(--color-accent)}
   input[type=checkbox]:checked::after{
     content:"";position:absolute;left:4px;top:1px;width:3px;height:7px;
-    border:solid var(--on-accent);border-width:0 2px 2px 0;transform:rotate(45deg);
+    border:solid var(--color-text-on-accent);border-width:0 2px 2px 0;transform:rotate(45deg);
   }
-  input[type=checkbox]:focus-visible{outline:1px solid var(--accent);outline-offset:2px}
+  input[type=checkbox]:focus-visible{outline:1px solid var(--color-accent);outline-offset:2px}
   /* slightly larger box to match the heavier list text */
   .todo input[type=checkbox]{width:16px;height:16px;margin-top:3px}
   .todo input[type=checkbox]:checked::after{left:5px;top:2px;width:3px;height:8px}
@@ -291,12 +355,12 @@
     .app{grid-template-columns:minmax(0,1fr)}
     .day{min-height:78px}
     .chip .t{display:none}
-    .dvgrid{grid-template-columns:minmax(0,1fr);gap:20px}
+    .dvgrid{grid-template-columns:minmax(0,1fr);gap:var(--space-5)}
   }
   @media (max-width:520px){
-    .wrap{padding:16px 12px 32px}
-    .day{min-height:62px;padding:5px}
-    .chip{font-size:9.5px;gap:4px}
+    .wrap{padding:var(--space-4) var(--space-3) var(--space-8)}
+    .day{min-height:62px;padding:var(--space-1)}
+    .chip{font-size:var(--text-micro);gap:var(--space-1)}
     .marks{display:none}
-    .bignum{font-size:27px}
+    .bignum{font-size:var(--text-display-sm)}
   }

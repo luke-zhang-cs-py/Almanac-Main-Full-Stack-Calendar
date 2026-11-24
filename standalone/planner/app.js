@@ -792,7 +792,7 @@
   function evNote(text, bad){
     var el = $("evMsg");
     el.textContent = text;
-    el.style.color = bad ? "var(--danger)" : "var(--text-faint)";
+    el.style.color = bad ? "var(--color-danger)" : "var(--color-text-subtle)";
     el.hidden = !text;
   }
 
@@ -1001,7 +1001,7 @@
   function msg(text, bad){
     var el = $("dataMsg");
     el.textContent = text;
-    el.style.color = bad ? "var(--danger)" : "var(--text-faint)";
+    el.style.color = bad ? "var(--color-danger)" : "var(--color-text-subtle)";
     el.hidden = false;
   }
 
@@ -1503,6 +1503,32 @@
     a.hidden = false;
     a.setAttribute("href", buildReminderMail());
   }
+
+  /* ===== theme =====
+   * Each name needs a .theme-<name> block in style.css; the first is the one
+   * in the markup. Adding a theme is that block plus one entry here. Saved
+   * under 'theme', the key every page on the published site shares. */
+  var THEMES = ["dark", "light"];
+  window.THEMES = THEMES;
+  (function(){
+    var html = document.documentElement;
+    var btn = $("themeBtn");
+    var theme = THEMES.filter(function(t){ return html.classList.contains("theme-" + t); })[0] || THEMES[0];
+    function next(){ return THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length]; }
+    function apply(name){
+      html.className = (html.className.replace(/(^|\s)theme-\S+/g, "").trim() + " theme-" + name).trim();
+      theme = name;
+      if (btn) btn.setAttribute("aria-label", "Switch to " + next() + " theme");
+      var bg = getComputedStyle(html).getPropertyValue("--color-bg").trim();
+      document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){ m.content = bg; });
+    }
+    apply(theme);   // also drops a saved theme that no longer exists
+    if (btn) btn.addEventListener("click", function(){
+      var name = next();
+      try { localStorage.setItem("theme", name); } catch (e) { /* not remembered */ }
+      apply(name);
+    });
+  })();
 
   renderSwatches();
   renderSetup();
