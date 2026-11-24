@@ -242,7 +242,7 @@ async function renderBookView() {
 
     const confirmRow = el("div", { style: "margin-top:1rem; display:flex; gap:0.75rem; align-items:center;" }, [
       el("button", { class: "btn btn-primary", id: "confirm-book-btn", disabled: "true" }, "Confirm booking"),
-      el("span", { id: "confirm-hint", style: "color:var(--muted); font-size:0.85rem;" }, "Pick a slot above"),
+      el("span", { id: "confirm-hint", style: "color:var(--color-text-subtle); font-size:0.85rem;" }, "Pick a slot above"),
     ]);
     boardCard.append(confirmRow);
 
@@ -406,7 +406,7 @@ async function renderProviderScheduleView() {
           };
           chip.append(del);
           return chip;
-        }) : [el("span", { style: "color:var(--muted); font-size:0.82rem;" }, "No hours set")]),
+        }) : [el("span", { style: "color:var(--color-text-subtle); font-size:0.82rem;" }, "No hours set")]),
         el("span", {}, ""),
       ]);
       daysWrap.append(row);
@@ -414,7 +414,7 @@ async function renderProviderScheduleView() {
 
     blocksWrap.innerHTML = "";
     if (!blocks.length) {
-      blocksWrap.append(el("div", { style: "color:var(--muted); font-size:0.85rem;" }, "No blocked dates."));
+      blocksWrap.append(el("div", { style: "color:var(--color-text-subtle); font-size:0.85rem;" }, "No blocked dates."));
     } else {
       blocks.forEach((b) => {
         const row = el("div", { class: "day-row" }, [
@@ -969,11 +969,13 @@ function poundsBar(summary) {
     ? summary.spentPence / summary.limitPence : 0;
   const over = summary.remainingPence < 0;
   const near = !over && share >= POUNDS_NEAR;
-  const colour = over ? "#d03b3b" : near ? "#fab219" : "#2a78d6";
+  /* The colours are theme tokens in style.css (.meter-fill.near/.over),
+   * so the bar reads correctly in every theme. */
+  const level = over ? " over" : near ? " near" : "";
 
   const fill = el("span", {
-    style: `display:block; height:100%; border-radius:4px; background:${colour};`
-           + ` width:${Math.min(100, Math.max(0, share * 100))}%;`,
+    class: "meter-fill" + level,
+    style: `width:${Math.min(100, Math.max(0, share * 100))}%;`,
   });
 
   /* The wording changes with the colour, not only the colour -- amber and
@@ -984,17 +986,14 @@ function poundsBar(summary) {
            : `${summary.remaining} left`;
 
   return el("div", { style: "margin:.6rem 0 1rem;" }, [
-    el("span", {
-      style: "display:block; height:8px; border-radius:4px;"
-             + " background:rgba(127,127,127,.25); overflow:hidden;",
-    }, fill),
+    el("span", { class: "meter" }, fill),
     el("div", {
       class: "mono",
       style: "display:flex; justify-content:space-between; gap:1rem;"
              + " font-size:.78rem; margin-top:.35rem;",
     }, [
       el("span",
-         { style: over ? "color:#d03b3b;" : near ? "color:#fab219;" : "" },
+         { class: "meter-state" + level },
          state),
       el("span", { class: "muted" },
          `${summary.spent} of ${summary.limit}`
@@ -1062,11 +1061,11 @@ async function renderPoundsView() {
         + (quote.lagDays ? ` at the ${quote.rateDate} rate` : "")
         + `, ${quote.fee} of that is the 2.5% markup`
         + (quote.fits ? "" : " — this would put you over the limit");
-      preview.style.color = quote.fits ? "" : "#d03b3b";
+      preview.classList.toggle("text-danger", !quote.fits);
     } catch (err) {
       if (quoting !== mine) return;
       preview.textContent = err.message;
-      preview.style.color = "#d03b3b";
+      preview.classList.add("text-danger");
     }
   };
   amount.addEventListener("input", showQuote);
@@ -1326,4 +1325,32 @@ async function bootApp() {
   }
 }
 
+/* ---------------------------------------------------------------- */
+/* Theme                                                               */
+/* ---------------------------------------------------------------- */
+/* Each name needs a .theme-<name> block in static/css/style.css; the first
+ * is the one written into the markup. Adding a theme is that block plus one
+ * entry here. The choice is saved under 'theme', the key every published
+ * page of this project shares. */
+const THEMES = ["dark", "light"];
+
+function initThemeToggle(root = document.documentElement) {
+  let theme = THEMES.find((t) => root.classList.contains("theme-" + t)) || THEMES[0];
+  const next = () => THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length];
+  const apply = (name) => {
+    root.className = (root.className.replace(/(^|\s)theme-\S+/g, "").trim() + " theme-" + name).trim();
+    theme = name;
+    $all("[data-theme-toggle]").forEach((b) => b.setAttribute("aria-label", `Switch to ${next()} theme`));
+    const bg = getComputedStyle(root).getPropertyValue("--color-bg").trim();
+    $all('meta[name="theme-color"]').forEach((m) => { m.content = bg; });
+  };
+  apply(theme);   /* also drops a saved theme that no longer exists */
+  $all("[data-theme-toggle]").forEach((b) => b.addEventListener("click", () => {
+    const name = next();
+    try { localStorage.setItem("theme", name); } catch (_e) { /* not remembered */ }
+    apply(name);
+  }));
+}
+
+document.addEventListener("DOMContentLoaded", () => initThemeToggle());
 document.addEventListener("DOMContentLoaded", bootApp);

@@ -383,3 +383,31 @@
     start();
   }
 }());
+
+/* Theme. Each name needs a .theme-<name> block in static/css/style.css (the
+ * stylesheet this page shares with the Flask app); the first is the one
+ * written into the markup. Adding a theme is that block plus one entry here.
+ * Saved under 'theme', the key every page on this origin shares. */
+var THEMES = ['dark', 'light'];
+
+(function () {
+  var html = document.documentElement;
+  var theme = THEMES.filter(function (t) { return html.classList.contains('theme-' + t); })[0] || THEMES[0];
+  function next() { return THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length]; }
+  function buttons() { return document.querySelectorAll('[data-theme-toggle]'); }
+  function apply(name) {
+    html.className = (html.className.replace(/(^|\s)theme-\S+/g, '').trim() + ' theme-' + name).trim();
+    theme = name;
+    buttons().forEach(function (b) { b.setAttribute('aria-label', 'Switch to ' + next() + ' theme'); });
+    var bg = getComputedStyle(html).getPropertyValue('--color-bg').trim();
+    document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) { m.content = bg; });
+  }
+  apply(theme);   // also drops a saved theme that no longer exists
+  buttons().forEach(function (b) {
+    b.addEventListener('click', function () {
+      var name = next();
+      try { localStorage.setItem('theme', name); } catch (e) { /* not remembered */ }
+      apply(name);
+    });
+  });
+}());

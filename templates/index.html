@@ -1,9 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="theme-dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Almanac — Appointment Booking</title>
+<meta name="theme-color" content="#12161d">
+<!-- Themed before this runs: class="theme-dark" above does that with no JavaScript.
+     This only restores a theme picked earlier, before first paint. The key is shared
+     with the published pages on purpose, so one choice carries across them. -->
+<script>try { var t = localStorage.getItem('theme'); if (/^[a-z]+$/.test(t)) document.documentElement.classList.replace('theme-dark', 'theme-' + t); } catch (e) {}</script>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
@@ -16,9 +21,9 @@
         <h1>The book stays open for everyone.</h1>
         <p>One shared calendar for clients, providers, and admins — no double-bookings, no back-and-forth.</p>
         <div class="roles">
-          <div><span class="tag" style="background:var(--muted)"></span>Client — books open slots</div>
-          <div><span class="tag" style="background:var(--teal)"></span>Provider — sets weekly hours</div>
-          <div><span class="tag" style="background:var(--brass)"></span>Admin — oversees the whole book</div>
+          <div><span class="tag tag-client"></span>Client — books open slots</div>
+          <div><span class="tag tag-provider"></span>Provider — sets weekly hours</div>
+          <div><span class="tag tag-admin"></span>Admin — oversees the whole book</div>
         </div>
       </div>
       <span class="brand sub">v1 · secure · self-hosted</span>
@@ -27,6 +32,10 @@
       <div class="tabs">
         <button class="tab active" data-mode="login">Sign in</button>
         <button class="tab" data-mode="register">Create account</button>
+        <button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to light theme">
+          <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+          <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </button>
       </div>
       <div id="auth-msg" class="form-msg error hidden"></div>
       <form id="auth-form">
@@ -63,10 +72,16 @@
   <aside class="sidebar">
     <div class="brand"><span class="mark">Almanac</span></div>
     <nav id="sidebar-nav"></nav>
+    <div class="sidebar-tools">
+      <button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to light theme">
+        <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+    </div>
     <div class="sidebar-foot">
       <div class="who" id="who-name"></div>
       <span class="role-badge" id="who-role"></span>
-      <div style="margin-top:1rem;">
+      <div class="sign-out">
         <button class="btn btn-ghost btn-block" id="logout-btn">Sign out</button>
       </div>
     </div>
